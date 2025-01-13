@@ -56,6 +56,11 @@ LeftPanel {
 .panel {
   border: round $border 75%;
   box-sizing: border-box;
+  height: auto;
+}
+
+.panel > * {
+  height: auto;
 }
 
 Placeholder {
@@ -64,6 +69,11 @@ Placeholder {
 
 .metadata_field {
   height: 1;
+}
+
+.band {
+  height: 1;
+  margin: 1 1;
 }
 
 .mark {

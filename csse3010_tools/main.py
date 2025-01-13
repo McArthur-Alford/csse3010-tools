@@ -1,148 +1,103 @@
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, HorizontalScroll, VerticalScroll, Vertical
-from textual.screen import Screen
-from textual.widgets import Footer, Header, Input, Select, Label, Placeholder, Button
-from textual.messages import Message
-from textual.suggester import SuggestFromList
+from textual.containers import HorizontalScroll, Vertical, VerticalScroll
 from textual.reactive import reactive
-from textual.widgets import Static, Rule
-from textual.validation import Regex, ValidationResult
-from csse3010_tools.criteria import example_criteria
+from textual.widgets import Footer, Header, Select, Static
+
 from csse3010_tools.appstate import AppState
-
-class StudentNumber(Input):
-    class Updated(Message):
-        def __init__(self, number) -> None:
-            self.number = number
-            super().__init__()
-    
-    student_numbers: reactive[list[str]] = reactive([])
-    
-    def on_mount(self):
-        self.Changed.bubble = False
-        self.placeholder = "sXXXXXXX"
-        self.validators = [Regex("s\\d{7}")]
-
-    def watch_student_numbers(self, old: list[str], new: list[str]):
-        print(new)
-        self.suggester = SuggestFromList(new,case_sensitive=False)
-
-    @on(Input.Changed)
-    def validation(self, event: Input.Changed) -> None:
-        if not event.validation_result.is_valid:
-            self.add_class("invalid")
-        else:
-            self.post_message(self.Updated(event.value))
-            self.remove_class("invalid")
-
-class StudentSelect(Horizontal):
-    def compose(self):
-        with Horizontal(classes="metadata_field"):
-            yield Label("Student Number:")
-            yield StudentNumber()
+from csse3010_tools.criteria import Criteria, example_criteria
+from csse3010_tools.ui.banner import Banner
+from csse3010_tools.ui.commit_hash_select import CommitHashSelect
+from csse3010_tools.ui.criteria_select import CriteriaSelect
+from csse3010_tools.ui.git_select import GitSelect
+from csse3010_tools.ui.student_select import StudentNumber
+from csse3010_tools.ui.mark_panel import MarkPanel
 
 class LeftPanel(VerticalScroll):
-    DEFAULT_CLASSES = "panel"
-
-    # def state_changed(self, old_value, new_value):
-    #     self.query_one("#student_number_selector", Input)
-    #     print("STATE CHANGED NERD")
-
-    # def on_mount(self):
-    #     self.watch(self.app, "app_state", self.state_changed, init=False)
-    
     def compose(self) -> ComposeResult:
-        self.border_title = "Stage Select"
-        with Horizontal(classes="metadata_field"):
-            with Horizontal(classes="metadata_field"):
-                yield Label("Year:")
-                yield Select([("2024", 1)], allow_blank=False)
-            with Horizontal(classes="metadata_field"):
-                yield Label("Sem:")
-                yield Select([("1", 1), ("2", 2)], allow_blank=False)
-        with Horizontal(classes="metadata_field"):
-            yield Label("Stage:")
-            yield Input(placeholder="sX")
-        yield Rule()
-        yield StudentSelect()
-        with Horizontal(classes="metadata_field"):
-            yield Input(placeholder="Name", disabled=True)
-        # yield Placeholder()
-
-class Band(Horizontal):
-    DEFAULT_CLASSES = "band"
-
-    def compose(self) -> ComposeResult:
-        with Horizontal(classes="mark_container"):
-            yield Input(classes="mark", placeholder="00")
-            yield Label("/ 01")
-        yield Label("Band 1")
-        with Horizontal(classes="grade_grid"):
-            yield Button("Exemplary", classes="grade_button")
-            yield Button("Proficient", classes="grade_button")
-            yield Button("Competent", classes="grade_button")
-            yield Button("Insufficient", classes="grade_button")
-            yield Button("Absent", classes="grade_button")
-
-class MarkPanel(VerticalScroll):
-    DEFAULT_CLASSES = "panel"
-
-    def compose(self) -> ComposeResult:
-        yield Band()
-        yield Band()
-        yield Band()
-        yield Band()
+        self.border_title = "Configuration"
+        yield CriteriaSelect()
+        yield GitSelect()
 
 class Body(HorizontalScroll):
     def compose(self) -> ComposeResult:
         yield LeftPanel()
-        yield MarkPanel()
-
-class Banner(Horizontal):
-    version = reactive("gitea version")
-    user = reactive("gitea user")
-
-    def watch_version(self, old_version: str, new_version: str) -> None:
-        self.query_one("#gitea_version", Label).update(str(new_version))
-
-    def watch_user(self, old_user: str, new_user: str) -> None:
-        self.query_one("#gitea_user", Label).update(str(new_user))
-    
-    def compose(self) -> ComposeResult:
-        yield Label("GITEA VERSION", id="gitea_version")
-        yield Label("GITEA USER", id="gitea_user")
-
+        with Vertical(id="right_panel"):
+            yield MarkPanel(None)
 
 class MarkingApp(App):
     CSS_PATH = "style.tcss"
     TITLE = "CSSE3010 Tools"
     SUB_TITLE = "Marking"
-    app_state: reactive[AppState] = reactive(AppState())
-    student_numbers: reactive[list[str]] = reactive([])
-    active_student: reactive[str] = reactive(str)
+
+    app_state: AppState = AppState()
+    active_student: reactive[str] = reactive("")
+    active_commit: reactive[str] = reactive("")
+    current_criteria: reactive[Criteria | None] = reactive(None)
 
     def watch_app_state(self) -> None:
-        print("AAAAAAAAAAAAAAAAAAAAAA")
+        """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
+        print("App State changed")
 
-    def watch_active_student(self, old, new) -> None:
+    def watch_active_student(self, old: str, new: str) -> None:
+        """When the user picks a new student, we can refresh the commit hash dropdown's choices."""
         if old == new:
             return
+        print(f"Active student changed from {old} to {new}")
+        commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
+        commits = [("abcdefg", "abcdefg"), ("1234567", "1234567")]
+        commit_hash_dropdown.set_options(commits)
+        commit_hash_dropdown.clear()
 
+    @on(StudentNumber.Updated)
     def on_student_number_updated(self, message: StudentNumber.Updated) -> None:
-        self.app_state.set_active_student(message.number)
-        self.active_student = self.app_state.active_student
-        self.mutate_reactive(MarkingApp.app_state)
+        """User selected a valid student number."""
+        self.active_student = message.number
+
+    @on(CommitHashSelect.Updated)
+    def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
+        """User selected a commit hash from the dropdown."""
+        self.active_commit = message.commit_hash
+        print(f"User selected commit: {self.active_commit}")
+        # TODO self.app_state.set_active_commit(...)
+
+    @on(CriteriaSelect.Picked)
+    def on_criteria_picked(self, message: CriteriaSelect.Picked) -> None:
+        """User changed year/semester/stage in the criteria picker."""
+        year, sem, stage = message.year, message.semester, message.stage
+        print(f"Criteria chosen: year={year}, semester={sem}, stage={stage}")
+
+        try:
+            self.current_criteria = self.app_state.criteria(year, sem, stage)
+        except FileNotFoundError:
+            # You might want to handle this more gracefully
+            print(f"No criteria file found for {year}/{sem}/{stage}")
+            self.current_criteria = None
+
+        self.build_criteria_panel()
+
+    def build_criteria_panel(self) -> None:
+        """
+        Clears the MarkPanel and populates it based on the current_criteria.
+        """
+        right_panel = self.query_one("#right_panel")
+        right_panel.remove_children()
+
+        if not self.current_criteria:
+            right_panel.mount(Static("No criteria loaded (missing YAML?)"))
+            return
+
+        new_mark_panel = MarkPanel(self.current_criteria)
+        right_panel.mount(new_mark_panel)
 
     def on_mount(self) -> None:
-        self.student_numbers = self.app_state.get_student_numbers()
-        
         banner = self.query_one(Banner)
-        banner.version = f"Gitea API {self.app_state.gitea.get_version()}"
-        banner.user = self.app_state.gitea.get_user()
+        banner.version = f"Marking Tools V1"
+        banner.user = f"Gitea User: {self.app_state.user}"
 
+        # Bind the list of student numbers to the StudentNumber widget
         student_number: StudentNumber = self.query_one(StudentNumber)
-        student_number.data_bind(student_numbers=MarkingApp.student_numbers)
+        student_number.data_bind(student_numbers=self.app_state.student_numbers)
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -151,26 +106,6 @@ class MarkingApp(App):
             yield Banner()
             yield Body()
 
-# class CombiningLayoutsExample(App):
-#     CSS_PATH = "combining_layouts.tcss"
-
-#     def compose(self) -> ComposeResult:
-#         yield Header()
-#         with Container(id="app-grid"):
-#             with VerticalScroll(id="left-pane"):
-#                 for number in range(15):
-#                     yield Static(f"Vertical layout, child {number}")
-#             with Horizontal(id="top-right"):
-#                 yield Static("Horizontally")
-#                 yield Static("Positioned")
-#                 yield Static("Children")
-#                 yield Static("Here")
-#             with Container(id="bottom-right"):
-#                 yield Static("This")
-#                 yield Static("panel")
-#                 yield Static("is")
-#                 yield Static("using")
-#                 yield Static("grid layout!", id="bottom-right-final")
 
 def main():
     app = MarkingApp()
