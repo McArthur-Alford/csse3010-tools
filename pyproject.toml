@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "csse3010_tools"
+version = "0.1.0"
+description = "tools for csse3010"
+authors = ["mcarthur <mcarthur.alford@proton.me>"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+textual = "^1.0.0"
+textual-autocomplete = "3.0.0a13"
+pyserde = { extras = ["yaml"], version = "^0.22.3" }
+py-gitea = "^0.2.8"
+
+[tool.poetry.dev-dependencies]
+hatch-vcs = "^0.4.0"
+hatchling = "^1.27.0"
+setuptools = "^75.8.0"
+
+[tool.poetry.scripts]
+main = "csse3010_tools.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

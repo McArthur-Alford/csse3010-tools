@@ -1,0 +1,39 @@
+{
+  "tasks": [
+    {
+      "task_name": "dt1",
+      "categories": [
+        {
+          "category_id": "1a/b",
+          "bands": [
+            {
+              "band_name": "a",
+              "criteria": [
+                "All movement functions fully work without errors.",
+                0,
+                "All movement functions are implemented but errors occur.",
+                "More than half the movement functions are implemented and work with no errors occuring.",
+                "Less than half the movement functions are implemented and at least partially work.",
+                "None of the movement functions work"
+              ]
+            },
+            {
+              "band_name": "b",
+              "criteria": [
+                "Status LEDs and LTA1000G work correctly.",
+                3,
+                3,
+                "Status LEDs or LTA100G are not implemented OR work with errors.",
+                5,
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "category_id": "1a/b"
+        }
+      ]
+    }
+  ]
+}

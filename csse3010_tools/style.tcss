@@ -1,0 +1,113 @@
+VerticalScroll {
+  scrollbar-size: 1 1;
+}
+
+Input {
+  height: 1;
+  border: none;
+}
+
+Button {
+  height: 1;
+  border: none;
+}
+
+Select {
+  height: 1;
+  border: none;
+  margin: 0;
+  width: auto;
+  height: 1;
+}
+
+Select:focus {
+  border: none;
+}
+
+SelectCurrent, SelectCurrent:focus {
+    border: none;
+}
+
+OptionList {
+  height: auto;
+  border: none;
+  margin: 0;
+  # width: auto;
+}
+
+AutoComplete {
+  width: 10;
+}
+
+Body {
+  box-sizing: border-box;
+  margin: 1 2;
+}
+
+Rule {
+  margin: 0;
+}
+
+LeftPanel {
+  width: 30;
+  dock: left;
+}
+
+.panel {
+  border: round $border 75%;
+  box-sizing: border-box;
+}
+
+Placeholder {
+  height: 1fr;
+}
+
+.metadata_field {
+  height: 1;
+}
+
+.mark {
+  width: 2;
+  background: $background-lighten-3 0%;
+}
+
+.mark_container {
+  background: $background-lighten-3 40%;
+  width: auto;
+  height: auto;
+}
+
+.grade_grid {
+  layout: grid;
+  grid-size: 5 1;
+}
+
+.grade_button {
+  width: 1fr;
+}
+
+.unexpanded_band {
+
+}
+
+.expanded_band {
+  
+}
+
+Banner {
+  height: 1;
+  margin: 1 0 0 0;
+  padding: 0 3;
+}
+
+#gitea_user {
+  dock: left;
+}
+
+#gitea_version {
+  dock: right;
+}
+
+.invalid {
+  color: $error;
+}
