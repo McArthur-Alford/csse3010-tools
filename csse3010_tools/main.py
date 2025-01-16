@@ -83,10 +83,6 @@ class MarkingApp(App):
         right_panel = self.query_one("#right_panel")
         right_panel.remove_children()
 
-        if not self.current_criteria:
-            right_panel.mount(Static("No criteria loaded (missing YAML?)"))
-            return
-
         new_mark_panel = MarkPanel(self.current_criteria)
         right_panel.mount(new_mark_panel)
 

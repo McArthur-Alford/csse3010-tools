@@ -427,13 +427,13 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "plum-dispatch"
-version = "2.5.5"
+version = "2.5.6"
 description = "Multiple dispatch in Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "plum_dispatch-2.5.5-py3-none-any.whl", hash = "sha256:38d5600c31382aa92a229c3397e086699ff2e3d8f8bf8d4786529883661cf998"},
-    {file = "plum_dispatch-2.5.5.tar.gz", hash = "sha256:96c995002cfb389f255ee228daf370d96e9377afd3486b30fdfcb706732699cb"},
+    {file = "plum_dispatch-2.5.6-py3-none-any.whl", hash = "sha256:07b6c8b1b453656fc650caf99c4e77f41ee37317062129e3bb558afeae10eeb6"},
+    {file = "plum_dispatch-2.5.6.tar.gz", hash = "sha256:ab25c2b891a14e30e04013a9ca36a3ab3d3e1c02105dc00dab82c47372efea99"},
 ]
 
 [package.dependencies]
@@ -684,13 +684,13 @@ typing-extensions = ">=4.5.0"
 
 [[package]]
 name = "trove-classifiers"
-version = "2025.1.6.15"
+version = "2025.1.10.15"
 description = "Canonical source for classifiers on PyPI (pypi.org)."
 optional = false
 python-versions = "*"
 files = [
-    {file = "trove_classifiers-2025.1.6.15-py3-none-any.whl", hash = "sha256:cd8e14d53158c72b68f7adcd119e3b4c7271d282999d3a8ec7486733a6202e4d"},
-    {file = "trove_classifiers-2025.1.6.15.tar.gz", hash = "sha256:49ab0326e000c54be6adc945d8fd618265c27de1296cf17caf9106fef96d2da4"},
+    {file = "trove_classifiers-2025.1.10.15-py3-none-any.whl", hash = "sha256:9824eb16f7df1b1cc1c217c52ce56c76869d6263da2067f8eadc45122a731cfc"},
+    {file = "trove_classifiers-2025.1.10.15.tar.gz", hash = "sha256:be2c7d25e46cd39d5c7151acd389584df3919f61890f5f163c8ee2090ff71e7f"},
 ]
 
 [[package]]
@@ -753,4 +753,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "b90c3f78a4ecc11abf91cf8891ce040166eb0e36ef1f608d437b13ac4e2a67a6"
+content-hash = "ef52d1d4ac00003f8f01b993b62d7b3be8bcc1c4ca3579cd4268f8528b6adf91"

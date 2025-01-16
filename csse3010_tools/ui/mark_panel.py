@@ -31,14 +31,16 @@ class MarkPanel(VerticalScroll):
         self.criteria_data = criteria_data
 
     def compose(self) -> ComposeResult:
+        self.border_title = "No Criteria"
+
         if not self.criteria_data or not self.criteria_data.tasks:
-            yield Static("No criteria loaded yet. Pick year/sem/stage on the left.")
+            yield Static("Unable to load criteria, is year/semester/stage valid?")
             return
 
         # Example: Put a border title with year/semester/stage
         self.border_title = (
             f"Criteria: {self.criteria_data.year} / "
-            f"{self.criteria_data.semester} / {self.criteria_data.stage}"
+            f"Sem: {self.criteria_data.semester} / Stage: {self.criteria_data.stage}"
         )
 
         for task in self.criteria_data.tasks:

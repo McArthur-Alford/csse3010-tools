@@ -1,0 +1,133 @@
+- band_name: 'Design Task 1: RCM System (10 Marks)'
+  description: null
+  sub_bands:
+  - band_name: Task 1.a/b (Best of a & b)
+    description: null
+    sub_bands:
+    - band_name: '1.a: Movement Functions'
+      description: null
+      requirements:
+      - marks: 0
+        requirement_name: Absent
+        requirement_type:
+          RequirementTypeDirect:
+            text: None of the movement functions work.
+      - marks: 1
+        requirement_name: Inadequate
+        requirement_type:
+          RequirementTypeDeferredUp: {}
+      - marks: 2
+        requirement_name: Insufficient
+        requirement_type:
+          RequirementTypeDirect:
+            text: More than half the movement functions are implemented and work
+              with no errors.
+      - marks: 3
+        requirement_name: Competent
+        requirement_type:
+          RequirementTypeDeferredUp: {}
+      - marks: 4
+        requirement_name: Proficient
+        requirement_type:
+          RequirementTypeDirect:
+            text: All movement functions fully work with minimal errors.
+      - marks: 5
+        requirement_name: Exemplary
+        requirement_type:
+          RequirementTypeDirect:
+            text: All movement functions fully work without errors.
+    - band_name: '1.b: Status LEDs / LTA1000G'
+      description: null
+      requirements:
+      - marks: 0
+        requirement_name: Absent (0)
+        requirement_type:
+          RequirementTypeDirect:
+            text: Status LEDs / LTA1000G not functioning.
+      - marks: 1
+        requirement_name: Inadequate (1)
+        requirement_type:
+          RequirementTypeDeferredUp: {}
+      - marks: 2
+        requirement_name: Insufficient (2)
+        requirement_type:
+          RequirementTypeDirect:
+            text: Status LEDs / LTA1000G partially implemented but with errors.
+      - marks: 3
+        requirement_name: Competent (3)
+        requirement_type:
+          RequirementTypeDeferredDown: {}
+      - marks: 4
+        requirement_name: Proficient (4)
+        requirement_type:
+          RequirementTypeDirect:
+            text: Status LEDs / LTA1000G work with minor issues.
+      - marks: 5
+        requirement_name: Exemplary (5)
+        requirement_type:
+          RequirementTypeDirect:
+            text: Status LEDs / LTA1000G fully operational with no errors.
+  - band_name: RCM System MyLib
+    description: null
+    requirements:
+    - marks: 0
+      requirement_name: Absent (0)
+      requirement_type:
+        RequirementTypeDirect:
+          text: Mylib task and register guides are not followed.
+    - marks: 1
+      requirement_name: Inadequate (1)
+      requirement_type:
+        RequirementTypeEmpty: {}
+    - marks: 2
+      requirement_name: Insufficient (2)
+      requirement_type:
+        RequirementTypeEmpty: {}
+    - marks: 3
+      requirement_name: Competent (3)
+      requirement_type:
+        RequirementTypeDirect:
+          text: Some mylib task/register guidelines not followed.
+    - marks: 4
+      requirement_name: Proficient (4)
+      requirement_type:
+        RequirementTypeEmpty: {}
+    - marks: 5
+      requirement_name: Exemplary (5)
+      requirement_type:
+        RequirementTypeDirect:
+          text: Conform to mylib task and register guidelines.
+- band_name: 'Design Task 2: RCM Radio Transmitter (5 Marks)'
+  description: null
+  requirements:
+  - marks: 0
+    requirement_name: Absent (0)
+    requirement_type:
+      RequirementTypeDirect:
+        text: Radio Transmitter is not implemented. myconfig.h not used.
+  - marks: 1
+    requirement_name: Inadequate (1)
+    requirement_type:
+      RequirementTypeDirect:
+        text: Radio Transmitter works with frequent errors; myconfig.h is incorrect.
+  - marks: 2
+    requirement_name: Insufficient (2)
+    requirement_type:
+      RequirementTypeDirect:
+        text: Radio Transmitter works but has issues; myconfig.h partially correct.
+  - marks: 3
+    requirement_name: Competent (3)
+    requirement_type:
+      RequirementTypeDirect:
+        text: Radio Transmitter works correctly with occasional errors; myconfig.h
+          is correct.
+  - marks: 4
+    requirement_name: Proficient (4)
+    requirement_type:
+      RequirementTypeDirect:
+        text: Radio Transmitter works reliably; myconfig.h is properly used.
+  - marks: 5
+    requirement_name: Exemplary (5)
+    requirement_type:
+      RequirementTypeDirect:
+        text: Radio Transmitter fully correct with no errors; myconfig.h fully compliant.
