@@ -1,478 +1,323 @@
-from typing import List, Union, Optional, Tuple
+import yaml
 from dataclasses import dataclass, field
-from serde import serde
+from typing import List, Optional, Union, Dict
 
-@serde
 @dataclass
-class RequirementTypeDeferredUp:
-    """Indicates that the requirement is deferred to the next HIGHER mark (up)."""
-    pass
+class Requirement:
+    name: str
+    marks: Optional[int] = None
+    description: Optional[str] = None
+    defers: Optional[str] = None
 
-@serde
-@dataclass
-class RequirementTypeDeferredDown:
-    """Indicates that the requirement is deferred to the next LOWER mark (down)."""
-    pass
-
-@serde
-@dataclass
-class RequirementTypeDirect:
-    """Indicates a text-based requirement."""
-    text: str
-
-@serde
-@dataclass
-class RequirementTypeEmpty:
-    """Indicates a blank (unselectable) requirement."""
-    pass
-
-RequirementType = Union[
-    RequirementTypeDeferredUp,
-    RequirementTypeDeferredDown,
-    RequirementTypeDirect,
-    RequirementTypeEmpty,
-]
-
-@serde
-@dataclass
-class RequirementItem:
-    requirement_name: str
-    marks: int
-    requirement_type: RequirementType
-
-@serde
 @dataclass
 class Band:
-    band_name: str = ""
-    description: Optional[str] = None
+    name: str
+    sum_of: Optional[List["Band"]] = None
+    best_of: Optional[List["Band"]] = None
+    requirements: Optional[List[Requirement]] = None
 
-    def formula(self, marks: List[int]) -> float:
-        """
-            Computes the marks of this band, given a list of ALREADY COMPUTED
-            marks for all sub-items
-        """
-        return 0.0
+    # index for the selected requirement
+    # increasing index is increasing marks, ALWAYS
+    chosen_req: Optional[int] = None
 
-@serde
-@dataclass
-class BaseBand(Band):
-    requirements: List[RequirementItem] = field(default_factory=list)
+    manual_mark: Optional[int] = None
 
-    def formula(self, marks: List[int]) -> float:
-        if len(marks) != 1:
-            raise ValueError(
-                f"BaseBand {self.band_name} expects exactly 1 integer in marks, got {marks}"
-            )
-        return float(marks[0])
+    def get_bounds(self) -> Optional[tuple[int, int]]:
+        if self.requirements is None or self.chosen_req is None:
+            return None
 
-    def valid_range(self, active_index: int) -> Tuple[int, int]:
-        if not (0 <= active_index < len(self.requirements)):
-            raise ValueError(
-                f"BaseBand {self.band_name} expects an index <= {len(self.requirements)}, got {active_index}"
-            )
-
-        lower_bound = active_index
-        upper_bound = active_index
-
-        for i in range(active_index, 0, -1):
-            if self.requirements[i] is RequirementTypeDeferredUp:
-                # The item below defers up, so keep going
-                lower_bound = i
-            else:
-                break
+        upper = self.chosen_req
+        lower = self.chosen_req
         
-        for i in range(active_index, len(self.requirements), 1):
-            if self.requirements[i] is RequirementTypeDeferredDown:
-                # The item above defers down, so keep going
-                upper_bound = i
+        # Gets the bounds around the current chosen requirement
+        for i in range(self.chosen_req - 1, 0, -1):
+            # go down, looking for up-deferals
+            if self.requirements[i].defers == "up":
+                self.lower = i
             else:
                 break
 
-        return (lower_bound, upper_bound)
+        for i in range(self.chosen_req + 1, len(self.requirements)):
+            # go up, looking for down referals
+            if self.requirements[i].defers == "down":
+                self.upper = i
+            else:
+                break
 
-@serde
-@dataclass
-class SummationBand(Band):
-    sub_bands: List[Band] = field(default_factory=list)
+        # Calculate marks for the lower and upper bounds
+        return (self.calculate(i=lower), self.calculate(i=upper))
 
-    def formula(self, marks: List[int]) -> float:
-        if len(marks) != len(self.sub_bands):
-            raise ValueError(
-                f"SummationBand {self.band_name} expects {len(self.sub_bands)} marks, got {len(marks)}"
-            )
+    def calculate(self, i: Optional[int] = None) -> int:
+        if self.manual_mark is not None:
+            return self.manual_mark
+        
+        value = 0
+        if self.sum_of is not None:
+            for item in self.sum_of:
+                value += item.calculate()
+        elif self.best_of is not None:
+            # The *boundary* for the selected mark (inclusive):
+            bounds = [item.get_bounds() for item in self.best_of]
 
-        return sum(marks)
+            # I THINK THAT THE LOWEST UPPER BOUND IS ALWAYS THE HIGHEST POSSIBLE MARK
+            mark = None
+            for bound in bounds:
+                if bound is None:
+                    return 0
+                (lower, upper) = bound
+                if mark is None:
+                    mark = upper
+                else:
+                    mark = min(mark, upper)
+            if mark is None:
+                return 0
+            value = mark
+        elif self.requirements is not None:
+            index = self.chosen_req
+            if i is not None:
+                index = i
+            if index is None:
+                return 0
+            temp = self.requirements[index].marks
+            if temp is not None:
+                value = temp
+            else:
+                raise ValueError("requirements must have a mark value")
+        return value
 
-@serde
-@dataclass
-class BestBand(Band):
-    sub_bands: List[BaseBand] = field(default_factory=list)
-
-    def formula(self, marks: List[int]) -> float:
-        if len(marks) != len(self.sub_bands):
-            raise ValueError(
-                f"BestBand {self.band_name} expects {len(self.sub_bands)} marks, got {len(marks)}"
-            )
-
-        # The mark is the lowest upper bound, effectively
-        # TODO verify this with matt, and some experiments
-        mark = 0
-        for band, single_mark in zip(self.sub_bands, marks):
-            # Get the valid range around the mark that the sub-band allows
-            (lower, upper) = band.valid_range(single_mark)
-
-            # Get the maximum Possible Mark
-            mark = max(mark, upper)
-
-        return mark
-
-@serde
 @dataclass
 class Rubric:
-    year: str
-    semester: str
-    stage: str
-    tasks: SummationBand # Rubric is always a sum of bands
-
-@serde
-@dataclass
-class MarkedBand:
-    band_name: str = ""
-    mark: int = 0
-
-@serde
-@dataclass
-class MarkedRubric:
-    year: str
-    semester: str
-    stage: str
-    tasks: str = "MarkedSummationBand"
-    global_comment: str = ""
+    stage: int
+    year: int
+    semester: int
+    tasks: List[Band] = field(default_factory=list)
 
 
-rubric = Rubric(
-    year="2025",
-    semester="1",
-    stage="3",
-    tasks=SummationBand(
-        band_name="All RCM Tasks",
-        sub_bands=[
-            SummationBand(
-                band_name="Design Task 1: RCM System (10 Marks)",
-                sub_bands=[
-                    BestBand(
-                        band_name="Task 1.a/b (Best of a & b)",
-                        sub_bands=[
-                            BaseBand(
-                                band_name="1.a: Movement Functions",
-                                requirements=[
-                                    RequirementItem(
-                                        requirement_name="Absent",
-                                        marks=0,
-                                        requirement_type=RequirementTypeDirect(
-                                            "None of the movement functions work."
-                                        ),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Inadequate",
-                                        marks=1,
-                                        requirement_type=RequirementTypeDeferredUp(),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Insufficient",
-                                        marks=2,
-                                        requirement_type=RequirementTypeDirect(
-                                            "More than half the movement functions are implemented and work with no errors."
-                                        ),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Competent",
-                                        marks=3,
-                                        requirement_type=RequirementTypeDeferredUp(),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Proficient",
-                                        marks=4,
-                                        requirement_type=RequirementTypeDirect(
-                                            "All movement functions fully work with minimal errors."
-                                        ),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Exemplary",
-                                        marks=5,
-                                        requirement_type=RequirementTypeDirect(
-                                            "All movement functions fully work without errors."
-                                        ),
-                                    ),
-                                ],
-                            ),
-                            BaseBand(
-                                band_name="1.b: Status LEDs / LTA1000G",
-                                requirements=[
-                                    RequirementItem(
-                                        requirement_name="Absent (0)",
-                                        marks=0,
-                                        requirement_type=RequirementTypeDirect(
-                                            "Status LEDs / LTA1000G not functioning."
-                                        ),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Inadequate (1)",
-                                        marks=1,
-                                        requirement_type=RequirementTypeDeferredUp(),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Insufficient (2)",
-                                        marks=2,
-                                        requirement_type=RequirementTypeDirect(
-                                            "Status LEDs / LTA1000G partially implemented but with errors."
-                                        ),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Competent (3)",
-                                        marks=3,
-                                        requirement_type=RequirementTypeDeferredDown(),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Proficient (4)",
-                                        marks=4,
-                                        requirement_type=RequirementTypeDirect(
-                                            "Status LEDs / LTA1000G work with minor issues."
-                                        ),
-                                    ),
-                                    RequirementItem(
-                                        requirement_name="Exemplary (5)",
-                                        marks=5,
-                                        requirement_type=RequirementTypeDirect(
-                                            "Status LEDs / LTA1000G fully operational with no errors."
-                                        ),
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                    BaseBand(
-                        band_name="RCM System MyLib",
-                        requirements=[
-                            RequirementItem(
-                                requirement_name="Absent (0)",
-                                marks=0,
-                                requirement_type=RequirementTypeDirect(
-                                    "Mylib task and register guides are not followed."
-                                ),
-                            ),
-                            RequirementItem(
-                                requirement_name="Inadequate (1)",
-                                marks=1,
-                                requirement_type=RequirementTypeEmpty(),
-                            ),
-                            RequirementItem(
-                                requirement_name="Insufficient (2)",
-                                marks=2,
-                                requirement_type=RequirementTypeEmpty(),
-                            ),
-                            RequirementItem(
-                                requirement_name="Competent (3)",
-                                marks=3,
-                                requirement_type=RequirementTypeDirect(
-                                    "Some mylib task/register guidelines not followed."
-                                ),
-                            ),
-                            RequirementItem(
-                                requirement_name="Proficient (4)",
-                                marks=4,
-                                requirement_type=RequirementTypeEmpty(),
-                            ),
-                            RequirementItem(
-                                requirement_name="Exemplary (5)",
-                                marks=5,
-                                requirement_type=RequirementTypeDirect(
-                                    "Conform to mylib task and register guidelines."
-                                ),
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-            BaseBand(
-                band_name="Design Task 2: RCM Radio Transmitter (5 Marks)",
-                requirements=[
-                    RequirementItem(
-                        requirement_name="Absent (0)",
-                        marks=0,
-                        requirement_type=RequirementTypeDirect(
-                            "Radio Transmitter is not implemented. myconfig.h not used."
-                        ),
-                    ),
-                    RequirementItem(
-                        requirement_name="Inadequate (1)",
-                        marks=1,
-                        requirement_type=RequirementTypeDirect(
-                            "Radio Transmitter works with frequent errors; myconfig.h is incorrect."
-                        ),
-                    ),
-                    RequirementItem(
-                        requirement_name="Insufficient (2)",
-                        marks=2,
-                        requirement_type=RequirementTypeDirect(
-                            "Radio Transmitter works but has issues; myconfig.h partially correct."
-                        ),
-                    ),
-                    RequirementItem(
-                        requirement_name="Competent (3)",
-                        marks=3,
-                        requirement_type=RequirementTypeDirect(
-                            "Radio Transmitter works correctly with occasional errors; myconfig.h is correct."
-                        ),
-                    ),
-                    RequirementItem(
-                        requirement_name="Proficient (4)",
-                        marks=4,
-                        requirement_type=RequirementTypeDirect(
-                            "Radio Transmitter works reliably; myconfig.h is properly used."
-                        ),
-                    ),
-                    RequirementItem(
-                        requirement_name="Exemplary (5)",
-                        marks=5,
-                        requirement_type=RequirementTypeDirect(
-                            "Radio Transmitter fully correct with no errors; myconfig.h fully compliant."
-                        ),
-                    ),
-                ],
-            ),
-        ],
-    ),
-)
+def parse_requirement(raw: Union[str, Dict[str, dict]]) -> Requirement:
+    if isinstance(raw, str):
+        return Requirement(name=raw)
+
+    if isinstance(raw, dict) and len(raw) == 1:
+        requirement_name = list(raw.keys())[0]
+        data = raw[requirement_name]
+
+        if isinstance(data, dict):
+            return Requirement(
+                name=requirement_name,
+                marks=data.get("marks"),
+                description=data.get("description"),
+                defers=data.get("defers"),
+            )
+        elif isinstance(data, str):
+            return Requirement(
+                name=requirement_name,
+                description=data
+            )
+        else:
+            return Requirement(name=requirement_name, description=str(data))
+
+    return Requirement(name=str(raw))
+
+
+def parse_band(d: dict) -> Band:
+    name = d["name"]
+    
+    sub_sum = None
+    sub_best = None
+    reqs = None
+
+    # Only one can be valid, for my sanity
+    if "sum_of" in d:
+        sub_sum = [parse_band(x) for x in d["sum_of"]]
+    elif "best_of" in d:
+        sub_best = [parse_band(x) for x in d["best_of"]]
+    elif "requirements" in d:
+        raw_requirements = d["requirements"]
+        reqs = [parse_requirement(item) for item in raw_requirements]
+
+    return Band(
+        name=name,
+        sum_of=sub_sum,
+        best_of=sub_best,
+        requirements=reqs
+    )
+
+
+def load_rubric_from_yaml(yaml_str: str) -> Rubric:
+    data = yaml.safe_load(yaml_str)
+
+    stage = data["stage"]
+    year = data["year"]
+    semester = data["semester"]
+
+    tasks_data = data["tasks"]
+    tasks = [parse_band(t) for t in tasks_data]
+
+    return Rubric(
+        stage=stage,
+        year=year,
+        semester=semester,
+        tasks=tasks
+    )
+
+def apply_markdown_table_to_rubric(rubric: Rubric, markdown_table: str) -> Rubric:
+    def find_band_by_name(bands: List[Band], target_name: str) -> Optional[Band]:
+        for b in bands:
+            if b.name == target_name:
+                return b
+            # Recurse into sub-bands:
+            if b.sum_of:
+                sub = find_band_by_name(b.sum_of, target_name)
+                if sub:
+                    return sub
+            if b.best_of:
+                sub = find_band_by_name(b.best_of, target_name)
+                if sub:
+                    return sub
+        return None
+
+    lines = markdown_table.strip().split('\n')
+    # The first two lines are header and separator:
+    # | Mark | Max | DT | Criteria | Comments (CID) |
+    # | ---- | --- | -- | -------- | -------------- |
+    data_lines = lines[2:]
+
+    for line in data_lines:
+        # Each line looks like: "| 0 | 5 |  | Task 1.a/b (Best of a & b) |  |"
+        # Split by '|' and strip:
+        columns = line.split('|')
+        # Typically we get ['', ' 0 ', ' 5 ', '  ', ' Task 1.a/b (Best of a & b) ', '  ', '']
+        # so we can slice off the first and last empty pieces:
+        columns = columns[1:-1]
+        # Now columns should be [' 0 ', ' 5 ', '  ', ' Task 1.a/b (Best of a & b) ', '  ']
+        columns = [c.strip() for c in columns]
+
+        if len(columns) < 4:
+            # Not a valid row
+            continue
+
+        mark_str, _max_str, _dt_str, band_name = columns[:4]
+        # We'll ignore the Comments column (if present) for now.
+        if not mark_str.isdigit():
+            # If 'mark_str' isn't a numeric value (e.g. might be ""), skip.
+            continue
+
+        mark_value = int(mark_str)
+
+        # Find the band by its name:
+        band = find_band_by_name(rubric.tasks, band_name)
+        if not band:
+            # No match, skip
+            continue
+
+        # If the band has sub-bands (sum_of or best_of), we do NOT set chosen_req,
+        # as the table does not provide detail about which sub-requirements were chosen.
+        if band.sum_of or band.best_of:
+            # We skip, as per the instruction "the sum or best_of blocks are hidden, 
+            # they may as well not exist" in terms of picking sub-requirements.
+            continue
+
+        # If the band directly has requirements, we attempt to match the mark_value
+        if band.requirements:
+            # Attempt exact match to a requirement's marks
+            for idx, req in enumerate(band.requirements):
+                if req.marks == mark_value:
+                    band.chosen_req = idx
+                    break
+            else:
+                # If no exact match, do nothing (leave chosen_req=None)
+                pass
+
+    return rubric
+
+def rubric_to_markdown_table(rubric: Rubric) -> str:
+    def band_max(band: Band) -> int:
+        if band.requirements:
+            return max(r.marks or 0 for r in band.requirements)
+        if band.best_of:
+            return max(band_max(b) for b in band.best_of)
+        if band.sum_of:
+            return sum(band_max(b) for b in band.sum_of)
+        return 0
+
+    def band_to_rows(band: Band) -> List[str]:
+        rows = []
+        mark = band.calculate()
+        mx = band_max(band)
+        if band.sum_of:
+            for sb in band.sum_of:
+                rows.extend(band_to_rows(sb))
+        else:
+            rows.append(f"| {mark} | {mx} |  | {band.name} |  |")
+        return rows
+
+    header = "| Mark | Max | DT | Criteria | Comments (CID) |"
+    sep = "| ---- | --- | -- | -------- | -------------- |"
+    lines = [header, sep]
+    for t in rubric.tasks:
+        lines.extend(band_to_rows(t))
+    return "\n".join(lines)
 
 if __name__ == "__main__":
+    sample_yaml = """
+stage: 1
+year: 2024
+semester: 1
+tasks:
+  - name: "Design Task 1: RCM System"
+    sum_of:
+      - name: "Task 1.a/b (Best of a & b)"
+        best_of:
+          - name: "1.a: Movement Functions"
+            requirements:
+              - Excellent:
+                  marks: 5
+                  description: "description here"
+              - Good:
+                  marks: 4
+                  defers: "up"
+          - name: "1.b: Status LEDs"
+            requirements:
+              - Excellent:
+                  marks: 5
+              - Good: "aa"
+      - name: "Other Task"
+        sum_of:
+          - name: "1c"
+            requirements:
+              - Excellent:
+                  marks: 5
+                  description: ""
+          - name: "1b"
+            requirements:
+              - Excellent:
+                  marks: 4
+                  description: ""
+      - name: "RCM System MyLib"
+        requirements:
+          - "d"
+"""
     from pprint import pprint
+
+    rubric = load_rubric_from_yaml(sample_yaml)
     pprint(rubric)
 
-    from serde.yaml import to_yaml, from_yaml
-    print(to_yaml(rubric))
+    # The name of the first task:
+    first_task_name = rubric.tasks[0].name
+    print("First task name:", first_task_name)
 
-    pprint(from_yaml(Rubric, to_yaml(rubric)))
+    # The name of the sub-band in sum_of -> best_of:
+    best_of_band_name = rubric.tasks[0].sum_of[0].name
+    print("Best-of band:", best_of_band_name)
 
-# # Example criteria from project
-# example_criteria = Criteria(
-#     year="2024", 
-#     semester="1", 
-#     stage="0", 
-#     tasks=[
-#     Task(
-#         task_name="RCM System",
-#         categories=[
-#             Category(
-#                 category_id="1.a/b",
-#                 bands=[
-#                     Band(
-#                         band_name="a",
-#                         criteria=[
-#                             Direct("All movement functions fully work without errors."),
-#                             Defered("Up"),
-#                             Direct("All movement functions are implemented but errors occur."),
-#                             Direct("More than half the movement functions are implemented and work with no errors."),
-#                             Direct("Less than half the movement functions are implemented and at least partially work."),
-#                             Direct("None of the movement functions work")
-#                         ]
-#                     ),
-#                     Band(
-#                         band_name="b",
-#                         criteria=[
-#                             Direct("Status LEDs and LTA1000G work correctly."),
-#                             Defered("Down"),
-#                             Defered("Down"),
-#                             Direct("Status LEDs or LTA1000G are not implemented OR work with errors."),
-#                             Defered("Down"),
-#                             Defered("Down")
-#                         ]
-#                     )
-#                 ]
-#             ),
-#             Category(
-#                 category_id="RCM System Mylib",
-#                 bands=[
-#                     Band(band_name="mylib", criteria = [
-#                              Direct("Conform to mylib task and register guidelines [1]"),
-#                              Empty(),
-#                              Direct("Some mylib task and register guidelines are not followed [2]"),
-#                              Empty(),
-#                              Empty(),
-#                              Direct("Mylib task and register guides are not followed [3]")
-#                          ])
-#                 ]
-#             )
-#         ],
-#         description="""
-#             All movement functions refer to all X, Y, Z, zoom and rotation.
+    # The name+marks of the first requirement under 1.a
+    first_req_1a = rubric.tasks[0].sum_of[0].best_of[0].requirements[0]
+    print("Requirement name:", first_req_1a.name, "| marks:", first_req_1a.marks)
 
-#             The below criteria are applied to the mylib.
+    md = rubric_to_markdown_table(rubric)
+    print(md)
 
-#             1. (Exemplary) And all movement functions work exemplary.
-#             2. (Competent) Or one or more movement function works competently.
-#             3. (Absent) Or all movement functions are absent or cannot be compiled.
-#         """
-#     ),
-#     Task(
-#         task_name="RCM Radio Transmitter",
-#         categories=[
-#             Category(
-#                 category_id="2.a/b",
-#                 bands=[
-#                     Band(
-#                         band_name="a",
-#                         criteria=[
-#                             Direct("Radio Transmitter works correctly."),
-#                             Defered("up"),
-#                             Direct("Radio Transmitter works correctly but occasional errors occur."),
-#                             Defered("up"),
-#                             Direct("Radio Transmitter works correctly with frequent errors occurring."),
-#                             Direct("Radio Transmitter is not implemented.")
-#                         ]
-#                     ),
-#                     Band(
-#                         band_name="b",
-#                         criteria=[
-#                             Direct("myconfig.h is correctly used and implemented."),
-#                             Defered("down"),
-#                             Defered("down"),
-#                             Defered("down"),
-#                             Direct("myconfig.h is not correctly used but correctly implemented."),
-#                             Direct("myconfig.h is not correctly used or implemented.")
-#                         ]
-#                     )
-#                 ]
-#             ),
-#             Category(
-#                 category_id="RCM Radio Transmitter Mylib",
-#                 bands=[
-#                     Band(
-#                         band_name="mylib",
-#                         criteria=[
-#                             Direct("Conform to mylib task and register guidelines [1]"),
-#                             Empty(),
-#                             Direct("Some mylib task and register guidelines are not followed [2]"),
-#                             Empty(),
-#                             Empty(),
-#                             Direct("Mylib task and register guides are not followed [3]")
-#                         ]
-#                     )
-#                 ]
-#             )
-#         ],
-#         description = ""
-#     )
-# ])
+    restored = apply_markdown_table_to_rubric(rubric, md)
+    # pprint(restored)
+    print(rubric_to_markdown_table(restored))
 
-# # Example Usage
-# if __name__ == "__main__":
-#     # Example criteria data based on the provided criteria sheet
-#     # Print example structure
-#     from pprint import pprint
-#     pprint(example_criteria)
-
-#     from serde.yaml import to_yaml, from_yaml
-#     print(to_yaml(example_criteria))
-
-#     pprint(from_yaml(Criteria, to_yaml((example_criteria))))
