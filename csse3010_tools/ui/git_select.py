@@ -14,5 +14,5 @@ class GitSelect(Container):
         yield StudentSelect()
         yield CommitHashSelect()
         with Horizontal(classes="metadata_field"):
-            yield Input(placeholder="Student Name", disabled=True)
+            yield Input(placeholder="Student Name", disabled=True, classes="metadata_field")
         self.border_title = "Select Student"

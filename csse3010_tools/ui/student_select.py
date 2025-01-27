@@ -8,6 +8,8 @@ from textual.validation import Regex, ValidationResult
 from textual import on
 
 class StudentNumber(Input):
+    DEFAULT_CLASSES="metadata_field"
+
     """Input widget for student number."""
     class Updated(Message):
         """Fires when the student number is changed and is valid."""
@@ -37,6 +39,8 @@ class StudentNumber(Input):
 
 
 class StudentSelect(Horizontal):
+    DEFAULT_CLASSES="metadata_field"
+    
     """A container for label + StudentNumber in a single row."""
     def compose(self) -> ComposeResult:
         with Horizontal(classes="metadata_field"):

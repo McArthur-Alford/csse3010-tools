@@ -12,312 +12,239 @@ class Requirement:
 @dataclass
 class Band:
     name: str
-    sum_of: Optional[List["Band"]] = None
-    best_of: Optional[List["Band"]] = None
-    requirements: Optional[List[Requirement]] = None
-
-    # index for the selected requirement
-    # increasing index is increasing marks, ALWAYS
-    chosen_req: Optional[int] = None
-
+    requirements: List[List[Requirement]] = field(default_factory=list)
+    keys: List[str] = field(default_factory = list)
+    choices: List[int] = field(default_factory = list)
+    comment: str = ""
     manual_mark: Optional[int] = None
 
-    def get_bounds(self) -> Optional[tuple[int, int]]:
-        if self.requirements is None or self.chosen_req is None:
-            return None
+    def max_marks(self) -> int:
+        if len(self.requirements) == 0:
+            return 0
+        return max([
+                   max([
+                       req.marks or 0
+                       for req in reqs
+                   ])
+                   if len(reqs) > 0
+                   else 0
+                   for reqs in self.requirements
+               ])
 
-        upper = self.chosen_req
-        lower = self.chosen_req
-        
-        # Gets the bounds around the current chosen requirement
-        for i in range(self.chosen_req - 1, 0, -1):
-            # go down, looking for up-deferals
-            if self.requirements[i].defers == "up":
-                self.lower = i
-            else:
-                break
+    def get_bounds(self) -> List[tuple[int, int]]:
+        result = []
+        for (requirements, choice) in zip(self.requirements, self.choices):
+            lower = upper = choice
 
-        for i in range(self.chosen_req + 1, len(self.requirements)):
-            # go up, looking for down referals
-            if self.requirements[i].defers == "down":
-                self.upper = i
-            else:
-                break
+            for i in range(choice + 1, len(requirements), 1):
+                if requirements[i].defers == "up":
+                    lower = i
+                else:
+                    break
 
-        # Calculate marks for the lower and upper bounds
-        return (self.calculate(i=lower), self.calculate(i=upper))
+            for i in range(choice - 1, -1, -1):
+                if requirements[i].defers == "down":
+                    upper = i
+                else:
+                    break
 
-    def calculate(self, i: Optional[int] = None) -> int:
+            result.append((requirements[upper].marks or 0, requirements[lower].marks or 0))
+        return result
+
+    def calculate(self, i: Optional[int] = None, strategy: str = "defered") -> int:
         if self.manual_mark is not None:
             return self.manual_mark
-        
-        value = 0
-        if self.sum_of is not None:
-            for item in self.sum_of:
-                value += item.calculate()
-        elif self.best_of is not None:
-            # The *boundary* for the selected mark (inclusive):
-            bounds = [item.get_bounds() for item in self.best_of]
 
-            # I THINK THAT THE LOWEST UPPER BOUND IS ALWAYS THE HIGHEST POSSIBLE MARK
-            mark = None
-            for bound in bounds:
-                if bound is None:
-                    return 0
-                (lower, upper) = bound
-                if mark is None:
-                    mark = upper
-                else:
-                    mark = min(mark, upper)
-            if mark is None:
-                return 0
-            value = mark
-        elif self.requirements is not None:
-            index = self.chosen_req
-            if i is not None:
-                index = i
-            if index is None:
-                return 0
-            temp = self.requirements[index].marks
-            if temp is not None:
-                value = temp
-            else:
-                raise ValueError("requirements must have a mark value")
-        return value
+        if not self.requirements:
+            return 0
+
+        # Apply the strategy
+        if strategy == "defered":
+            # Return the smallest upper bound?
+            # TODO verify this is the propper approach
+            bounds = self.get_bounds()
+            if len(bounds) > 0:
+                return min([upper for (upper, lower) in bounds])
+        return 0
+
+@dataclass
+class Task:
+    name: str
+    description: Optional[str]
+    bands: List[Band] = field(default_factory=list)
 
 @dataclass
 class Rubric:
-    stage: int
-    year: int
-    semester: int
-    tasks: List[Band] = field(default_factory=list)
+    stage: str
+    year: str
+    semester: str
+    tasks: List[Task] = field(default_factory=list)
 
+    def update(self, task, band, subband, mark):
+        self.tasks[task].bands[band].choices[subband] = mark
 
 def parse_requirement(raw: Union[str, Dict[str, dict]]) -> Requirement:
     if isinstance(raw, str):
         return Requirement(name=raw)
 
     if isinstance(raw, dict) and len(raw) == 1:
-        requirement_name = list(raw.keys())[0]
-        data = raw[requirement_name]
+        req_name = list(raw.keys())[0]
+        data = raw[req_name]
 
         if isinstance(data, dict):
             return Requirement(
-                name=requirement_name,
+                name=req_name,
                 marks=data.get("marks"),
                 description=data.get("description"),
-                defers=data.get("defers"),
+                defers=data.get("defers")
             )
         elif isinstance(data, str):
-            return Requirement(
-                name=requirement_name,
-                description=data
-            )
+            return Requirement(name=req_name, description=data)
         else:
-            return Requirement(name=requirement_name, description=str(data))
+            return Requirement(name=req_name, description=str(data))
 
     return Requirement(name=str(raw))
 
-
 def parse_band(d: dict) -> Band:
     name = d["name"]
-    
-    sub_sum = None
-    sub_best = None
+    raw_requirements = d.get("requirements", [])
+    raw_best_of = d.get("multi_requirements", [])
     reqs = None
+    keys = []
+    if "requirements" in d:
+        reqs = [[parse_requirement(item) for item in raw_requirements]]
+    else:
+        reqs = [[parse_requirement(item) for item in v] for k, v in raw_best_of.items()]
+        keys = [k for k, v in raw_best_of.items()]
+    choices = [len(req) - 1 for req in reqs]
+    return Band(name=name, requirements=reqs, keys=keys, choices=choices)
 
-    # Only one can be valid, for my sanity
-    if "sum_of" in d:
-        sub_sum = [parse_band(x) for x in d["sum_of"]]
-    elif "best_of" in d:
-        sub_best = [parse_band(x) for x in d["best_of"]]
-    elif "requirements" in d:
-        raw_requirements = d["requirements"]
-        reqs = [parse_requirement(item) for item in raw_requirements]
-
-    return Band(
-        name=name,
-        sum_of=sub_sum,
-        best_of=sub_best,
-        requirements=reqs
-    )
-
+def parse_task(d: dict) -> Task:
+    name = d["name"]
+    bands_data = d.get("bands", [])
+    bands = [parse_band(b) for b in bands_data]
+    description = d.get("description", None)
+    return Task(name=name, bands=bands, description=description)
 
 def load_rubric_from_yaml(yaml_str: str) -> Rubric:
     data = yaml.safe_load(yaml_str)
-
-    stage = data["stage"]
-    year = data["year"]
-    semester = data["semester"]
-
+    stage = str(data["stage"])
+    year = str(data["year"])
+    semester = str(data["semester"])
     tasks_data = data["tasks"]
-    tasks = [parse_band(t) for t in tasks_data]
+    tasks = [parse_task(t) for t in tasks_data]
+    return Rubric(stage=stage, year=year, semester=semester, tasks=tasks)
 
-    return Rubric(
-        stage=stage,
-        year=year,
-        semester=semester,
-        tasks=tasks
-    )
+def rubric_to_markdown_table(rubric: Rubric) -> str:
+    lines = []
+    header = "| Mark | Max | DT | Criteria | Comments (CID) |"
+    sep = "| ---- | --- | -- | -------- | -------------- |"
+    lines.append(header)
+    lines.append(sep)
 
-def apply_markdown_table_to_rubric(rubric: Rubric, markdown_table: str) -> Rubric:
-    def find_band_by_name(bands: List[Band], target_name: str) -> Optional[Band]:
-        for b in bands:
-            if b.name == target_name:
-                return b
-            # Recurse into sub-bands:
-            if b.sum_of:
-                sub = find_band_by_name(b.sum_of, target_name)
-                if sub:
-                    return sub
-            if b.best_of:
-                sub = find_band_by_name(b.best_of, target_name)
-                if sub:
-                    return sub
+    for task in rubric.tasks:
+        for band in task.bands:
+            mark = band.calculate()
+            mx = band.max_marks()
+            tsk = task.name
+            # DT (the third column) is unused, so just leave it blank
+            lines.append(f"| {mark} | {mx} | {tsk} | {band.name} | {band.comment} |")
+
+    return "\n".join(lines)
+
+def apply_markdown_table_to_rubric(rubric: Rubric, table: str) -> Rubric:
+    def find_band_by_name(rubric: Rubric, band_name: str) -> Optional[Band]:
+        for task in rubric.tasks:
+            for b in task.bands:
+                if b.name == band_name:
+                    return b
         return None
 
-    lines = markdown_table.strip().split('\n')
-    # The first two lines are header and separator:
-    # | Mark | Max | DT | Criteria | Comments (CID) |
-    # | ---- | --- | -- | -------- | -------------- |
-    data_lines = lines[2:]
+    lines = table.strip().split('\n')
+    # Skip header and separator
+    lines = lines[2:]
 
-    for line in data_lines:
-        # Each line looks like: "| 0 | 5 |  | Task 1.a/b (Best of a & b) |  |"
-        # Split by '|' and strip:
-        columns = line.split('|')
-        # Typically we get ['', ' 0 ', ' 5 ', '  ', ' Task 1.a/b (Best of a & b) ', '  ', '']
-        # so we can slice off the first and last empty pieces:
-        columns = columns[1:-1]
-        # Now columns should be [' 0 ', ' 5 ', '  ', ' Task 1.a/b (Best of a & b) ', '  ']
-        columns = [c.strip() for c in columns]
-
-        if len(columns) < 4:
-            # Not a valid row
+    for line in lines:
+        parts = line.split('|')
+        parts = [p.strip() for p in parts if p.strip()]
+        if len(parts) < 4:
             continue
-
-        mark_str, _max_str, _dt_str, band_name = columns[:4]
-        # We'll ignore the Comments column (if present) for now.
+        mark_str, max_str, _dt, band_name = parts[:4]
         if not mark_str.isdigit():
-            # If 'mark_str' isn't a numeric value (e.g. might be ""), skip.
             continue
-
         mark_value = int(mark_str)
-
-        # Find the band by its name:
-        band = find_band_by_name(rubric.tasks, band_name)
+        band = find_band_by_name(rubric, band_name)
         if not band:
-            # No match, skip
             continue
-
-        # If the band has sub-bands (sum_of or best_of), we do NOT set chosen_req,
-        # as the table does not provide detail about which sub-requirements were chosen.
-        if band.sum_of or band.best_of:
-            # We skip, as per the instruction "the sum or best_of blocks are hidden, 
-            # they may as well not exist" in terms of picking sub-requirements.
-            continue
-
-        # If the band directly has requirements, we attempt to match the mark_value
-        if band.requirements:
-            # Attempt exact match to a requirement's marks
-            for idx, req in enumerate(band.requirements):
-                if req.marks == mark_value:
-                    band.chosen_req = idx
-                    break
-            else:
-                # If no exact match, do nothing (leave chosen_req=None)
-                pass
+        # We just set manual_mark. We do not guess which requirement was chosen.
+        band.manual_mark = mark_value
 
     return rubric
 
-def rubric_to_markdown_table(rubric: Rubric) -> str:
-    def band_max(band: Band) -> int:
-        if band.requirements:
-            return max(r.marks or 0 for r in band.requirements)
-        if band.best_of:
-            return max(band_max(b) for b in band.best_of)
-        if band.sum_of:
-            return sum(band_max(b) for b in band.sum_of)
-        return 0
-
-    def band_to_rows(band: Band) -> List[str]:
-        rows = []
-        mark = band.calculate()
-        mx = band_max(band)
-        if band.sum_of:
-            for sb in band.sum_of:
-                rows.extend(band_to_rows(sb))
-        else:
-            rows.append(f"| {mark} | {mx} |  | {band.name} |  |")
-        return rows
-
-    header = "| Mark | Max | DT | Criteria | Comments (CID) |"
-    sep = "| ---- | --- | -- | -------- | -------------- |"
-    lines = [header, sep]
-    for t in rubric.tasks:
-        lines.extend(band_to_rows(t))
-    return "\n".join(lines)
-
-if __name__ == "__main__":
-    sample_yaml = """
+sample_yaml = """
 stage: 1
 year: 2024
 semester: 1
 tasks:
-  - name: "Design Task 1: RCM System"
-    sum_of:
-      - name: "Task 1.a/b (Best of a & b)"
-        best_of:
-          - name: "1.a: Movement Functions"
-            requirements:
+  - name: 'Design Task 1: RCM System'
+    description: "This task has an optional comment"
+    bands:
+      - name: Task 1.a/b
+        multi_requirements:
+          '1.a: Movement Functions':
               - Excellent:
                   marks: 5
-                  description: "description here"
+                  description: description here
               - Good:
                   marks: 4
-                  defers: "up"
-          - name: "1.b: Status LEDs"
-            requirements:
+                  defers: up
+          '1.b: Status LEDs':
               - Excellent:
                   marks: 5
-              - Good: "aa"
-      - name: "Other Task"
-        sum_of:
-          - name: "1c"
-            requirements:
+                  defers: down
+              - Good:
+                  marks: 4
+                  description: magical description
+  - name: 'Design Task 2: Something Else'
+    bands:
+      - name: Task 2.a/b
+        multi_requirements:
+          '2.a: magic':
               - Excellent:
                   marks: 5
-                  description: ""
-          - name: "1b"
-            requirements:
+                  description: 'A'
+          '2.b: sorcery':
               - Excellent:
                   marks: 4
-                  description: ""
-      - name: "RCM System MyLib"
+                  description: 'B'
+      - name: RCM System MyLib
         requirements:
-          - "d"
+          - Excellent:
+              marks: 5
+              description: ugh
 """
-    from pprint import pprint
+example_rubric = load_rubric_from_yaml(sample_yaml)
 
+if __name__ == "__main__":
     rubric = load_rubric_from_yaml(sample_yaml)
+    md = rubric_to_markdown_table(rubric)
+    print("Initial table:")
+    print(md)
+
+    rubric.tasks[0].bands[0].choices = [0, 0]
+    rubric.tasks[1].bands[1].choices = [0, 1]
+    from pprint import pprint
     pprint(rubric)
-
-    # The name of the first task:
-    first_task_name = rubric.tasks[0].name
-    print("First task name:", first_task_name)
-
-    # The name of the sub-band in sum_of -> best_of:
-    best_of_band_name = rubric.tasks[0].sum_of[0].name
-    print("Best-of band:", best_of_band_name)
-
-    # The name+marks of the first requirement under 1.a
-    first_req_1a = rubric.tasks[0].sum_of[0].best_of[0].requirements[0]
-    print("Requirement name:", first_req_1a.name, "| marks:", first_req_1a.marks)
-
     md = rubric_to_markdown_table(rubric)
     print(md)
 
-    restored = apply_markdown_table_to_rubric(rubric, md)
-    # pprint(restored)
-    print(rubric_to_markdown_table(restored))
-
+    # Example of faking a user-provided table to apply:
+    user_table = """| Mark | Max | DT | Criteria | Comments (CID) |
+| ---- | --- | -- | -------- | -------------- |
+| 2 | 3 |  | FooBand |  |
+| 5 | 5 |  | BarBand |  |
+| 0 | 0 |  | AnExtra |  |
+"""
+    apply_markdown_table_to_rubric(rubric, user_table)
+    print("\nAfter applying user table:")
+    print(rubric_to_markdown_table(rubric))

@@ -1,103 +1,46 @@
-year: "2024"
-semester: "1"
-stage: "0"
+stage: 0
+year: 2024
+semester: 1
 tasks:
-- categories:
-  - bands:
-    - band_name: a
-      criteria:
-      - Direct:
-          text: All movement functions fully work without errors.
-      - Defered:
-          direction: up
-      - Direct:
-          text: All movement functions are implemented but errors occur.
-      - Direct:
-          text: More than half the movement functions are implemented and work with
-            no errors.
-      - Direct:
-          text: Less than half the movement functions are implemented and at least
-            partially work.
-      - Direct:
-          text: None of the movement functions work
-    - band_name: b
-      criteria:
-      - Direct:
-          text: Status LEDs and LTA1000G work correctly.
-      - Defered:
-          direction: down
-      - Defered:
-          direction: down
-      - Direct:
-          text: Status LEDs or LTA1000G are not implemented OR work with errors.
-      - Defered:
-          direction: down
-      - Defered:
-          direction: down
-    category_id: 1.a/b
-  - bands:
-    - band_name: mylib
-      criteria:
-      - Direct:
-          text: Conform to mylib task and register guidelines [1]
-      - Empty: {}
-      - Direct:
-          text: Some mylib task and register guidelines are not followed [2]
-      - Empty: {}
-      - Empty: {}
-      - Direct:
-          text: Mylib task and register guides are not followed [3]
-    category_id: RCM System Mylib
-  description: "\n            All movement functions refer to all X, Y, Z, zoom and\
-    \ rotation.\n\n            The below criteria are applied to the mylib.\n\n  \
-    \          1. (Exemplary) And all movement functions work exemplary.\n       \
-    \     2. (Competent) Or one or more movement function works competently.\n   \
-    \         3. (Absent) Or all movement functions are absent or cannot be compiled.\n\
-    \        "
-  task_name: RCM System
-- categories:
-  - bands:
-    - band_name: a
-      criteria:
-      - Direct:
-          text: Radio Transmitter works correctly.
-      - Defered:
-          direction: up
-      - Direct:
-          text: Radio Transmitter works correctly but occasional errors occur.
-      - Defered:
-          direction: up
-      - Direct:
-          text: Radio Transmitter works correctly with frequent errors occurring.
-      - Direct:
-          text: Radio Transmitter is not implemented.
-    - band_name: b
-      criteria:
-      - Direct:
-          text: myconfig.h is correctly used and implemented.
-      - Defered:
-          direction: down
-      - Defered:
-          direction: down
-      - Defered:
-          direction: down
-      - Direct:
-          text: myconfig.h is not correctly used but correctly implemented.
-      - Direct:
-          text: myconfig.h is not correctly used or implemented.
-    category_id: 2.a/b
-  - bands:
-    - band_name: mylib
-      criteria:
-      - Direct:
-          text: Conform to mylib task and register guidelines [1]
-      - Empty: {}
-      - Direct:
-          text: Some mylib task and register guidelines are not followed [2]
-      - Empty: {}
-      - Empty: {}
-      - Direct:
-          text: Mylib task and register guides are not followed [3]
-    category_id: RCM Radio Transmitter Mylib
-  description: ''
-  task_name: RCM Radio Transmitter
+  - name: 'Design Task 1: RCM System'
+    description: "This task has an optional comment"
+    bands:
+      - name: Task 1.a/b
+        multi_requirements:
+          '1.a: Movement Functions':
+              - Excellent:
+                  marks: 5
+                  description: description here
+              - Good:
+                  marks: 4
+                  defers: up
+              - Bad:
+                  marks: 3
+                  description: other description here
+          '1.b: Status LEDs':
+              - Excellent:
+                  marks: 5
+                  defers: down
+              - Good:
+                  marks: 4
+                  description: magical description
+              - Bad:
+                  marks: 3
+                  description: "other description here. This description is really large and verbose to test what that looks like in the UI. Hopefully it looks good!"
+  - name: 'Design Task 2: Something Else'
+    bands:
+      - name: Task 2.a/b
+        multi_requirements:
+          '2.a: magic':
+              - Excellent:
+                  marks: 5
+                  description: 'A'
+          '2.b: sorcery':
+              - Excellent:
+                  marks: 4
+                  description: 'B'
+      - name: RCM System MyLib
+        requirements:
+          - Excellent:
+              marks: 5
+              description: ugh

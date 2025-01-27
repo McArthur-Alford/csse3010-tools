@@ -1,6 +1,15 @@
+/* -------------------- GLOBAL -------------------- */
+
 VerticalScroll {
   scrollbar-size: 1 1;
 }
+
+Body {
+  box-sizing: border-box;
+  margin: 1 2;
+}
+
+/* -------------------- INPUTS & BUTTONS -------------------- */
 
 Input {
   height: 1;
@@ -12,20 +21,22 @@ Button {
   border: none;
 }
 
+/* -------------------- SELECT & RELATED -------------------- */
+
 Select {
   height: 1;
   border: none;
   margin: 0;
   width: auto;
-  height: 1;
 }
 
 Select:focus {
   border: none;
 }
 
-SelectCurrent, SelectCurrent:focus {
-    border: none;
+SelectCurrent,
+SelectCurrent:focus {
+  border: none;
 }
 
 OptionList {
@@ -35,79 +46,47 @@ OptionList {
   # width: auto;
 }
 
-AutoComplete {
-  width: 10;
-}
+/* -------------------- LAYOUT & PANELS -------------------- */
 
-Body {
-  box-sizing: border-box;
-  margin: 1 2;
-}
-
-Rule {
-  margin: 0;
-}
-
-LeftPanel {
+ConfigPanel.horizontal {
+  layout: vertical;
   width: 30;
   dock: left;
 }
 
+ConfigPanel.vertical {
+  layout: grid;
+  grid-size: 3;
+  height: auto;
+  dock: top;
+}
+
+ConfigPanel.vertical.tight {
+  grid-size: 2;
+}
+
+ConfigPanel.vertical.verytight {
+  grid-size: 1;
+}
+
 .panel {
-  border: round $border 75%;
+  border: round $border 100%;
   box-sizing: border-box;
   height: auto;
-}
-
-.panel > * {
-  height: auto;
-}
-
-Placeholder {
-  height: 1fr;
+  min-width: 10;
 }
 
 .metadata_field {
   height: 1;
 }
 
-.band {
-  height: 1;
-  margin: 1 1;
-}
-
-.mark {
-  width: 2;
-  background: $background-lighten-3 0%;
-}
-
-.mark_container {
-  background: $background-lighten-3 40%;
-  width: auto;
-  height: auto;
-}
-
-.grade_grid {
-  layout: grid;
-  grid-size: 5 1;
-}
-
-.grade_button {
-  width: 1fr;
-}
-
-.unexpanded_band {
-
-}
-
-.expanded_band {
-  
-}
+/* -------------------- BANNER -------------------- */
 
 Banner {
   height: 1;
   margin: 1 0 0 0;
   padding: 0 3;
+  display: none;
 }
 
 #gitea_user {
@@ -118,6 +97,148 @@ Banner {
   dock: right;
 }
 
+/* -------------------- STATES -------------------- */
+
 .invalid {
   color: $error;
+}
+
+/* -------------------- COLLAPSIBLE -------------------- */
+
+.task_collapsible {
+  background: $background;
+  padding: 0;
+  margin: 0 1;
+  border: none;
+  width: 1fr;
+
+  &:focus-within {
+    background-tint: $background;
+  }
+
+  &.-collapsed > Contents {
+    display: none;
+  }
+}
+
+.task_collapsible > CollapsibleTitle {
+  background: $border;
+  color: $surface;
+  text-style: bold;
+  width: 1fr;
+  height: auto;
+  padding: 0 1 0 1;
+
+  &:hover {
+    background: $border 60%;
+    color: $surface;
+    text-style: bold;
+  }
+
+  &:focus {
+    background: $border 60%;
+    text-style: $block-cursor-text-style;
+    # background: $block-cursor-background;
+    color: $block-cursor-foreground;
+  }
+}
+
+.task_collapsible.-collapsed > CollapsibleTitle {
+  background: $surface;
+  color: $block-cursor-blurred-foreground;
+  text-style: $block-cursor-blurred-text-style;
+
+  &:hover {
+    background: $block-hover-background;
+    color: $foreground;
+  }
+
+  &:focus {
+    background: $border 35%;
+  }
+}
+
+.task_collapsible > Contents {
+  width: 1fr;
+  height: auto;
+  padding: 0 0 0 3;
+  margin: 0;
+  border: none;
+}
+
+/* -------------------- WIDGETS -------------------- */
+
+BandWidget {
+  width: 1fr;
+  layout: grid;
+  padding: 0;
+  margin: 0 1 1 0;
+  background: $boost;
+  grid_gutter: 0 0;
+  background: $panel;
+  border-left: outer $border  100%;
+  grid_rows: 1 auto auto;
+  height: auto;
+
+  &> * {
+    width: 1fr;
+    content-align: center middle;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  &> Button {
+    height: 100%;
+    background: $surface;
+    content-align: center middle;
+    border: hkey $surface 10%;
+
+    &:focus {
+      background-tint: $surface 0%;
+      background: $surface;
+      color: $foreground;
+    }
+
+    &.selected_markbutton {
+      color: $success;
+    }
+
+    &:hover {
+      border: hkey $foreground 100%;
+      background-tint: $surface 0%;
+      background: $surface;
+      tint: $background 30%;
+    }
+  }
+}
+
+.mark {
+  background: $panel;
+  box-sizing: content-box;
+  padding: 0 1;
+}
+
+Input.mark {
+  padding-right: 0;
+  padding-left: 1;
+}
+
+
+.whitespace {
+  height: 1;
+}
+
+.subband_label {
+  content-align: center middle;
+  text-align: center;
+  column_span: 3;
+  height: 100%;
+  color: $foreground;
+  background: $panel;
+}
+
+.taskdescription {
+  margin: 1;
 }

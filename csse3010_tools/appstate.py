@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from serde.yaml import from_yaml
 
-from csse3010_tools.criteria import Criteria
+from csse3010_tools.criteria import Rubric, load_rubric_from_yaml
 from csse3010_tools.gitea_api import GiteaInterface
 
 ROOT_DIR = "."
@@ -38,7 +38,7 @@ class AppState:
         self._commits_cache: Dict[str, List[Commit]] = {}
 
         # Cache of all loaded Criteria objects
-        self._criteria_list: List[Criteria] = []
+        self._criteria_list: List[Rubric] = []
 
         # Load them all at init time
         self.reload_students()
@@ -58,7 +58,7 @@ class AppState:
                 continue
             with open(path, "r") as file:
                 data = file.read()
-                crit = from_yaml(Criteria, data)
+                crit = load_rubric_from_yaml(data)
                 self._criteria_list.append(crit)
 
     def _get_commits_for_student(self, student_number: str) -> List[Commit]:
@@ -90,11 +90,11 @@ class AppState:
     def commits(self, student_number: str) -> List[Commit]:
         return self._get_commits_for_student(student_number)
 
-    def criteria(self, year: str, semester: str, task: str) -> Criteria:
+    def criteria(self, year: str, semester: str, task: str) -> Rubric:
         for crit in self._criteria_list:
-            # Ensure the Criteria object exposes these attributes (crit.year, crit.semester, crit.stage)
             if (crit.year == year) and (crit.semester == semester) and (crit.stage == task):
                 return crit
+        print(self._criteria_list)
         raise FileNotFoundError(f"No matching criteria found for {year=}, {semester=}, {task=}")
 
     def clone_repo(self, student_number: str, commit_hash: str) -> None:
@@ -105,7 +105,7 @@ class AppState:
         local_dir = "temporary/marks"
         self._gitea.clone_marks(local_dir)
 
-    def write_marks(self, criteria: Criteria, student_number: str, marks) -> None:
+    def write_marks(self, criteria: Rubric, student_number: str, marks) -> None:
         local_dir = "temporary/marks"
 
         self._gitea.pull_marks(local_dir)

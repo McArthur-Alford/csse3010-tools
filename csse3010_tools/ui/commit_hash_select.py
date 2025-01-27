@@ -10,6 +10,7 @@ from textual import on
 
 class CommitHashSelect(Horizontal):
     """A label + dropdown for commit hashes."""
+    DEFAULT_CLASSES = "metadata_field"
    
     class Updated(Message):
         """Fires when the user selects a new commit hash."""

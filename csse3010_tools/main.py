@@ -1,27 +1,31 @@
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import HorizontalScroll, Vertical, VerticalScroll
+from textual.containers import HorizontalScroll, Vertical, VerticalScroll, Container
+from textual.events import Resize
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Select, Static
+from textual.widgets import Footer, Header, Select
 
 from csse3010_tools.appstate import AppState
-from csse3010_tools.criteria import Criteria, example_criteria
+from csse3010_tools.criteria import Rubric
 from csse3010_tools.ui.banner import Banner
+from csse3010_tools.ui.build_menu import BuildMenu
 from csse3010_tools.ui.commit_hash_select import CommitHashSelect
 from csse3010_tools.ui.criteria_select import CriteriaSelect
 from csse3010_tools.ui.git_select import GitSelect
-from csse3010_tools.ui.student_select import StudentNumber
 from csse3010_tools.ui.mark_panel import MarkPanel
+from csse3010_tools.ui.student_select import StudentNumber
 
-class LeftPanel(VerticalScroll):
+
+class ConfigPanel(Container):
     def compose(self) -> ComposeResult:
         self.border_title = "Configuration"
         yield CriteriaSelect()
         yield GitSelect()
+        yield BuildMenu()
 
-class Body(HorizontalScroll):
+class Body(Container):
     def compose(self) -> ComposeResult:
-        yield LeftPanel()
+        yield ConfigPanel()
         with Vertical(id="right_panel"):
             yield MarkPanel(None)
 
@@ -33,7 +37,25 @@ class MarkingApp(App):
     app_state: AppState = AppState()
     active_student: reactive[str] = reactive("")
     active_commit: reactive[str] = reactive("")
-    current_criteria: reactive[Criteria | None] = reactive(None)
+    current_criteria: reactive[Rubric | None] = reactive(None)
+
+    def on_resize(self, event: Resize):
+        width, height = event.size
+        panel = self.query_one(ConfigPanel)
+
+        panel.remove_class("tight")
+        panel.remove_class("verytight")
+        if width < 60:
+            panel.add_class("verytight")
+        elif width < 90:
+            panel.add_class("tight")
+
+        if width < 120 and width < height * 2:
+            panel.add_class("vertical")
+            panel.remove_class("horizontal")
+        else:
+            panel.add_class("horizontal")
+            panel.remove_class("vertical")
 
     def watch_app_state(self) -> None:
         """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
@@ -88,8 +110,9 @@ class MarkingApp(App):
 
     def on_mount(self) -> None:
         banner = self.query_one(Banner)
-        banner.version = f"Marking Tools V1"
+        banner.version = "Marking Tools V1"
         banner.user = f"Gitea User: {self.app_state.user}"
+        self.theme = "tokyo-night"
 
         # Bind the list of student numbers to the StudentNumber widget
         student_number: StudentNumber = self.query_one(StudentNumber)
