@@ -3,7 +3,7 @@ from textual.app import App, ComposeResult
 from textual.containers import HorizontalScroll, Vertical, VerticalScroll, Container
 from textual.events import Resize
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Select
+from textual.widgets import Footer, Header, Select, TabbedContent, TabPane
 
 from csse3010_tools.appstate import AppState
 from csse3010_tools.criteria import Rubric
@@ -16,46 +16,51 @@ from csse3010_tools.ui.mark_panel import MarkPanel
 from csse3010_tools.ui.student_select import StudentNumber
 
 
-class ConfigPanel(Container):
-    def compose(self) -> ComposeResult:
-        self.border_title = "Configuration"
-        yield CriteriaSelect()
-        yield GitSelect()
-        yield BuildMenu()
-
 class Body(Container):
     def compose(self) -> ComposeResult:
-        yield ConfigPanel()
-        with Vertical(id="right_panel"):
-            yield MarkPanel(None)
+        yield GitSelect()
+        with TabbedContent(initial="marking"):
+            with TabPane("Marking", id="marking"):
+                with Vertical(id="Config"):
+                    yield CriteriaSelect()
+                with Vertical(id="mark_panel"):
+                    yield MarkPanel(None)
 
 class MarkingApp(App):
     CSS_PATH = "style.tcss"
     TITLE = "CSSE3010 Tools"
     SUB_TITLE = "Marking"
 
+    BINDINGS = [
+        ("ctrl+s", "select_student", "Select Student"),
+        ("ctrl+b", "build", "Build"),
+        ("ctrl+d", "deploy", "Deploy"),
+        ("ctrl+c", "clean", "Clean"),
+        ("ctrl+r", "reset", "Reset")
+    ]
+
     app_state: AppState = AppState()
     active_student: reactive[str] = reactive("")
     active_commit: reactive[str] = reactive("")
     current_criteria: reactive[Rubric | None] = reactive(None)
 
-    def on_resize(self, event: Resize):
-        width, height = event.size
-        panel = self.query_one(ConfigPanel)
+    # def on_resize(self, event: Resize):
+    #     width, height = event.size
+    #     panel = self.query_one(MenuBar)
 
-        panel.remove_class("tight")
-        panel.remove_class("verytight")
-        if width < 60:
-            panel.add_class("verytight")
-        elif width < 90:
-            panel.add_class("tight")
+    #     panel.remove_class("tight")
+    #     panel.remove_class("verytight")
+    #     if width < 60:
+    #         panel.add_class("verytight")
+    #     elif width < 90:
+    #         panel.add_class("tight")
 
-        if width < 120 and width < height * 2:
-            panel.add_class("vertical")
-            panel.remove_class("horizontal")
-        else:
-            panel.add_class("horizontal")
-            panel.remove_class("vertical")
+    #     if width < 120 and width < height * 2:
+    #         panel.add_class("vertical")
+    #         panel.remove_class("horizontal")
+    #     else:
+    #         panel.add_class("horizontal")
+    #         panel.remove_class("vertical")
 
     def watch_app_state(self) -> None:
         """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
@@ -102,11 +107,12 @@ class MarkingApp(App):
         """
         Clears the MarkPanel and populates it based on the current_criteria.
         """
-        right_panel = self.query_one("#right_panel")
-        right_panel.remove_children()
+        mark_panels = self.query("#mark_panel")
+        for mark_panel in mark_panels:
+            mark_panel.remove_children()
 
-        new_mark_panel = MarkPanel(self.current_criteria)
-        right_panel.mount(new_mark_panel)
+            new_mark_panel = MarkPanel(self.current_criteria)
+            mark_panel.mount(new_mark_panel)
 
     def on_mount(self) -> None:
         banner = self.query_one(Banner)

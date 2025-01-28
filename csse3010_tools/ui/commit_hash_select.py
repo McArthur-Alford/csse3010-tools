@@ -19,9 +19,9 @@ class CommitHashSelect(Horizontal):
             super().__init__()
 
     def compose(self) -> ComposeResult:
-        with Horizontal(classes="metadata_field"):
-            yield Label("Commit Hash:")
-            yield Select([], id="commit-hash-dropdown", allow_blank=True)
+        # with Horizontal(classes="metadata_field"):
+            # yield Label("Commit Hash:")
+            yield Select([], prompt="Commit Hash", id="commit-hash-dropdown", allow_blank=True)
 
     @on(Select.Changed)
     def commit_changed(self, event: Select.Changed) -> None:

@@ -46,38 +46,76 @@ OptionList {
   # width: auto;
 }
 
-/* -------------------- LAYOUT & PANELS -------------------- */
+/* -------------------- LAYOUT -------------------- */
 
-ConfigPanel.horizontal {
-  layout: vertical;
-  width: 30;
-  dock: left;
-}
-
-ConfigPanel.vertical {
-  layout: grid;
-  grid-size: 3;
+MenuBar {
+  layout: horizontal;
   height: auto;
   dock: top;
+  width: 1fr;
 }
 
-ConfigPanel.vertical.tight {
-  grid-size: 2;
+#Config {
+  width: 1fr;
+  height: auto;
 }
 
-ConfigPanel.vertical.verytight {
-  grid-size: 1;
+BuildMenu {
+  width: 1fr;
+  height: auto;
+  content-align: right middle;
+  layout: horizontal;
+}
+
+CriteriaSelect {
+  layout: horizontal;
+  height: auto;
+  width: 1fr;
+  margin-bottom: 1;
+  margin-top: 1;
+}
+
+CriteriaSelect > Select {
+  width: 1fr;
+  max-width: 20;
+  margin-right: 1;
+}
+
+GitSelect {
+  layout: horizontal;
+  height: auto;
+  margin-bottom: 1;
+}
+
+GitSelect > * {
+  height: 1;
+}
+
+GitSelect Input {
+  max-width: 20;
+}
+
+GitSelect Select {
+  max-width: 30;
+}
+
+GitSelect #StudentName {
+  width: auto;
+  max-width: 1fr;
+}
+
+CommitHashSelect {
+  # max-width: 20;
+}
+
+CommitHashSelect Select {
+  width: auto;
 }
 
 .panel {
   border: round $border 100%;
   box-sizing: border-box;
   height: auto;
-  min-width: 10;
-}
-
-.metadata_field {
-  height: 1;
 }
 
 /* -------------------- BANNER -------------------- */
@@ -122,21 +160,21 @@ Banner {
 }
 
 .task_collapsible > CollapsibleTitle {
-  background: $border;
-  color: $surface;
+  background: $border 80%;
+  color: $block-cursor-foreground;
   text-style: bold;
   width: 1fr;
   height: auto;
   padding: 0 1 0 1;
 
   &:hover {
-    background: $border 60%;
+    background: $border 80%;
     color: $surface;
     text-style: bold;
   }
 
   &:focus {
-    background: $border 60%;
+    background: $border 80%;
     text-style: $block-cursor-text-style;
     # background: $block-cursor-background;
     color: $block-cursor-foreground;
@@ -168,6 +206,10 @@ Banner {
 
 /* -------------------- WIDGETS -------------------- */
 
+MarkPanel {
+  max-height: 1fr;
+}
+
 BandWidget {
   width: 1fr;
   layout: grid;
@@ -176,8 +218,7 @@ BandWidget {
   background: $boost;
   grid_gutter: 0 0;
   background: $panel;
-  border-left: outer $border  100%;
-  grid_rows: 1 auto auto;
+  border-left: outer $border 80%;
   height: auto;
 
   &> * {
@@ -189,7 +230,7 @@ BandWidget {
     border: none;
   }
 
-  &> Button {
+  &> .marktile {
     height: 100%;
     background: $surface;
     content-align: center middle;
@@ -234,11 +275,18 @@ Input.mark {
   content-align: center middle;
   text-align: center;
   column_span: 3;
-  height: 100%;
+  height: auto;
   color: $foreground;
   background: $panel;
 }
 
 .taskdescription {
   margin: 1;
+}
+
+MarkButton {
+  # max-height: 1fr;
+  padding: 0;
+  margin: 0;
+  height: auto;
 }

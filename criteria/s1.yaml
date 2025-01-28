@@ -1,0 +1,399 @@
+stage: 1
+year: 2024
+semester: 1
+tasks:
+  - name: "Design Task 1: RCM System (10 Marks)"
+    bands:
+      - name: "CID 1.a/b"
+        multi_requirements:
+          "1.a: Movement Functions":
+            - Exemplary:
+                marks: 5
+                description: "All movement functions fully work without errors (X, Y, Z, Zoom, Rotation)."
+            - Proficient:
+                marks: 4
+                defers: up      # PDF shows a) ←
+            - Competent:
+                marks: 3
+                description: "All movement functions are implemented but errors occur."
+            - Insufficient:
+                marks: 2
+                description: "More than half the movement functions are implemented and work with no errors."
+            - Inadequate:
+                marks: 1
+                description: "Less than half the movement functions are implemented and at least partially work."
+            - Absent:
+                marks: 0
+                description: "None of the movement functions work."
+
+          "1.b: Status LEDs and LTA1000G":
+            - Exemplary:
+                marks: 5
+                description: "Status LEDs and LTA1000G work correctly."
+            - Proficient:
+                marks: 4
+                defers: down    # PDF shows b) →
+            - Competent:
+                marks: 3
+                defers: down    # b) → again
+            - Insufficient:
+                marks: 2
+                description: "Status LEDs or LTA1000G are not implemented OR work with errors."
+            - Inadequate:
+                marks: 1
+                defers: down    # b) → again
+            - Absent:
+                marks: 0
+                defers: down
+
+      - name: "RCM System MyLib"
+        requirements:
+          - Exemplary:
+              marks: 5
+              description: "Conform to mylib task and register guidelines.¹"
+          - Proficient:
+              marks: 4
+              defers: up       # arrow indicates “borrow from row above”
+          - Competent:
+              marks: 3
+              description: "Some mylib task and register guidelines are not followed.²"
+          - Insufficient:
+              marks: 2
+              defers: down     # borrow from row below
+          - Inadequate:
+              marks: 1
+              defers: down
+          - Absent:
+              marks: 0
+              description: "Mylib task and register guides are not followed.³"
+
+  - name: "Design Task 2: RCM Radio Transmitter (5 Marks)"
+    bands:
+      - name: "CID 2.a/b"
+        multi_requirements:
+          "2.a: Radio Transmitter":
+            - Exemplary:
+                marks: 5
+                description: "Radio Transmitter works correctly."
+            - Proficient:
+                marks: 4
+                defers: up      # a) ←
+            - Competent:
+                marks: 3
+                description: "Radio Transmitter works correctly, but occasional errors occur."
+            - Insufficient:
+                marks: 2
+                defers: down    # a) ← again (pointing downward from Competent)
+            - Inadequate:
+                marks: 1
+                description: "Radio Transmitter works correctly with frequent errors occurring."
+            - Absent:
+                marks: 0
+                description: "Radio Transmitter is not implemented."
+
+          "2.b: myconfig.h Usage":
+            - Exemplary:
+                marks: 5
+                description: "myconfig.h is correctly used and implemented."
+            - Proficient:
+                marks: 4
+                defers: down    # b) →
+            - Competent:
+                marks: 3
+                defers: down    # b) →
+            - Insufficient:
+                marks: 2
+                defers: down    # also b) →
+            - Inadequate:
+                marks: 1
+                description: "myconfig.h is not correctly used but correctly implemented."
+            - Absent:
+                marks: 0
+                description: "myconfig.h is not correctly used or implemented."
+
+      - name: "RCM Radio Transmitter MyLib"
+        requirements:
+          - Exemplary:
+              marks: 5
+              description: "Conform to mylib task and register guidelines.¹"
+          - Proficient:
+              marks: 4
+              defers: up
+          - Competent:
+              marks: 3
+              description: "Some mylib task and register guidelines are not followed.²"
+          - Insufficient:
+              marks: 2
+              defers: down
+          - Inadequate:
+              marks: 1
+              defers: down
+          - Absent:
+              marks: 0
+              description: "Mylib task and register guides are not followed.³"
+
+  - name: "Design Task 3: RCM Radio Packet (10 Marks) — (Radio transmitter must work)"
+    bands:
+      - name: "CID 3.a/b"
+        multi_requirements:
+          "3.a: Packets":
+            - Exemplary:
+                marks: 5
+                description: "All packets fully work without errors."
+            - Proficient:
+                marks: 4
+                description: "All packets fully work without errors."
+            - Competent:
+                marks: 3
+                description: "All packets are transmitted and work, but errors occur."
+            - Insufficient:
+                marks: 2
+                description: "More than half the packets are implemented and work with no errors."
+            - Inadequate:
+                marks: 1
+                description: "Less than half the packets are implemented and at least partially work."
+            - Absent:
+                marks: 0
+                description: "None of the packets work."
+
+          "3.b: Hamming":
+            - Exemplary:
+                marks: 5
+                description: "Hamming is correctly implemented and no errors occur."
+            - Proficient:
+                marks: 4
+                description: "Hamming is correctly implemented but occasional errors occur."
+            - Competent:
+                marks: 3
+                description: "Hamming is correctly implemented but frequent errors occur."
+            - Insufficient:
+                marks: 2
+                defers: up      # b) →, but the PDF actually might have shown that “→” from b) 
+            - Inadequate:
+                marks: 1
+                defers: down
+            - Absent:
+                marks: 0
+                description: "Hamming is not implemented or does not work."
+
+      - name: "Radio Packet MyLib"
+        requirements:
+          - Exemplary:
+              marks: 5
+              description: "Conform to mylib task and register guidelines.¹"
+          - Proficient:
+              marks: 4
+              defers: up
+          - Competent:
+              marks: 3
+              description: "Some mylib task and register guidelines are not followed.²"
+          - Insufficient:
+              marks: 2
+              defers: down
+          - Inadequate:
+              marks: 1
+              defers: down
+          - Absent:
+              marks: 0
+              description: "Mylib task and register guides are not followed.³"
+
+  - name: "Design Task 4: RCM Input (10 Marks)"
+    bands:
+      - name: "CID 4.a/b"
+        multi_requirements:
+          "4.a: Commands":
+            - Exemplary:
+                marks: 5
+                description: "All commands fully work without errors (Idle, X, Y, Z, Rotation, Zoom, Origin)."
+            - Proficient:
+                marks: 4
+                defers: up   # a) → / a) ←?  (In PDF, it might be ← or →, but we assume up)
+            - Competent:
+                marks: 3
+                description: "All commands are implemented and work but errors occur."
+            - Insufficient:
+                marks: 2
+                description: "More than half the commands are implemented and work with no errors."
+            - Inadequate:
+                marks: 1
+                description: "Less than half the commands are implemented and partially work."
+            - Absent:
+                marks: 0
+                description: "None of the commands work."
+
+          "4.b: Latency":
+            - Exemplary:
+                marks: 5
+                description: "No observable latency when executing."
+            - Proficient:
+                marks: 4
+                description: "There is a noticeable latency when executing."
+            - Competent:
+                marks: 3
+                defers: up
+            - Insufficient:
+                marks: 2
+                defers: down
+            - Inadequate:
+                marks: 1
+                defers: down
+            - Absent:
+                marks: 0
+                description: "No lower rating available."
+
+      - name: "RCM Input MyLib"
+        requirements:
+          - Exemplary:
+              marks: 5
+              description: "Conform to mylib task and register guidelines.¹"
+          - Proficient:
+              marks: 4
+              defers: up
+          - Competent:
+              marks: 3
+              description: "Some mylib task and register guidelines are not followed.²"
+          - Insufficient:
+              marks: 2
+              defers: down
+          - Inadequate:
+              marks: 1
+              defers: down
+          - Absent:
+              marks: 0
+              description: "Mylib task and register guides are not followed.³"
+
+  - name: "Design Task 5: RCM Output (5 Marks)"
+    bands:
+      - name: "CID 5.a/b/c"
+        multi_requirements:
+          "5.a: Seven Segment Display":
+            - Exemplary:
+                marks: 5
+                description: "Seven Segment Display works correctly."
+            - Proficient:
+                marks: 4
+                defers: up
+            - Competent:
+                marks: 3
+                description: "Seven Segment Display works correctly, but occasional errors occur."
+            - Insufficient:
+                marks: 2
+                defers: down
+            - Inadequate:
+                marks: 1
+                description: "Seven Segment Display works correctly, but frequent errors occur."
+            - Absent:
+                marks: 0
+                description: "Seven Segment Display is not implemented."
+
+          "5.b: RGB LED":
+            - Exemplary:
+                marks: 5
+                description: "RGB LED works correctly."
+            - Proficient:
+                marks: 4
+                defers: up
+            - Competent:
+                marks: 3
+                description: "RGB LED works correctly, but occasional errors occur."
+            - Insufficient:
+                marks: 2
+                defers: down
+            - Inadequate:
+                marks: 1
+                description: "RGB LED works correctly with frequent errors."
+            - Absent:
+                marks: 0
+                description: "RGB LED is not implemented."
+
+          "5.c: MyLib Guidelines":
+            - Exemplary:
+                marks: 5
+                description: "Conform to mylib task and register guidelines.¹"
+            - Proficient:
+                marks: 4
+                defers: up
+            - Competent:
+                marks: 3
+                description: "Some mylib task and register guidelines are not followed.²"
+            - Insufficient:
+                marks: 2
+                defers: down
+            - Inadequate:
+                marks: 1
+                defers: down
+            - Absent:
+                marks: 0
+                description: "Mylib task and register guides are not followed.³"
+
+  - name: "Challenge Task 1–5 (5 Marks total)"
+    bands:
+      - name: "CID 6.a/b"
+        multi_requirements:
+          "6.a: Feature Functionality and Reliability":
+            - UpTo3Marks:
+                marks: 3
+                description: "Max 3 marks for feature functionality and reliability."
+          "6.b: Code or MyLib Implementation":
+            - UpTo2Marks:
+                marks: 2
+                description: "Max 2 marks for code or mylib implementation."
+
+  - name: "Coding Practices (10 Marks)"
+    bands:
+      - name: "CID 7.a–7.c: Code Quality Guidelines"
+        multi_requirements:
+          "7.a: No Code Guidelines":
+            - ZeroMarks:
+                marks: 0
+                description: "No code quality guidelines followed."
+          "7.b: Some Guidelines":
+            - OneMark:
+                marks: 1
+                description: "Some code quality guidelines followed."
+          "7.c: All Guidelines":
+            - TwoMarks:
+                marks: 2
+                description: "All code quality guidelines followed."
+
+      - name: "CID 7.d–7.g: Required non-RCM MyLib drivers"
+        multi_requirements:
+          "7.d: Not Used":
+            - ZeroMarks:
+                marks: 0
+                description: "Required non-RCM MyLib drivers not used/implemented."
+          "7.e: Partially Used":
+            - OneMark:
+                marks: 1
+                description: "Drivers partially used with extra functionality in other tasks."
+          "7.f: Specific RCM":
+            - TwoMarks:
+                marks: 2
+                description: "Drivers used but contain specific RCM code (not generic)."
+          "7.g: Generic":
+            - ThreeMarks:
+                marks: 3
+                description: "Drivers used and are generic (no specific RCM code)."
+
+      - name: "CID 7.h–7.l: RTOS and Tasking (5 marks total)"
+        multi_requirements:
+          "7.h: Global Sharing + Sync":
+            - OneMark:
+                marks: 1
+                description: "Sharing parameters via global variables w/ FreeRTOS sync or message passing."
+          "7.i: HW Initialization Scheduling":
+            - OneMark:
+                marks: 1
+                description: "Scheduling hardware initialization within tasks."
+          "7.j: CRITICAL SECTION Usage":
+            - OneMark:
+                marks: 1
+                description: "Using CRITICAL SECTION macro for key parts of code."
+          "7.k: Stack Size":
+            - OneMark:
+                marks: 1
+                description: "Appropriate stack size allocation for tasks."
+          "7.l: Task Priority":
+            - OneMark:
+                marks: 1
+                description: "Appropriate task priority allocation."

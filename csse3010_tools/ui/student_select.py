@@ -43,6 +43,6 @@ class StudentSelect(Horizontal):
     
     """A container for label + StudentNumber in a single row."""
     def compose(self) -> ComposeResult:
-        with Horizontal(classes="metadata_field"):
-            yield Label("Student Number:")
+        # with Horizontal(classes="metadata_field"):
+            # yield Label("Student Number:")
             yield StudentNumber()
