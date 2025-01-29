@@ -1,6 +1,7 @@
-from gitea import Gitea, User, Organization, Repository
+from gitea import Gitea, User, Organization, Repository, Commit
 import requests
 import re
+from git import Repo
 
 # GITEA API Stuff
 TOKEN_PATH = ".access_token"
@@ -47,13 +48,24 @@ class GiteaInterface:
         # Can this cause a lot of api calls? Probs no more than 3 or 4, but if there are issues with overuse this is a place to look
         orgs = self.get_orgs(student)
         for org in orgs:
-            if not username[1:] in org.name:
+            if username[1:] not in org.name:
                 continue
 
             repos = org.get_repositories()
             for repo in repos:
                 if repo.name == "repo":
                     return repo
+
+    def clone_repo(self, student: User, commit_hash: str, directory: str) -> None:
+        commits = self.get_repo(student).get_commits()
+        from pprint import pprint
+        urls = [commit.html_url for commit in commits if commit.sha == commit_hash]
+        if len(urls) != 1:
+            print("too many or no urls matching that hash")
+            return
+
+        url = urls[0]
+        Repo.clone_from(url, directory)
         
 
 if __name__ == "__main__":

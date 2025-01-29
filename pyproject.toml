@@ -11,6 +11,8 @@ textual-autocomplete = "3.0.0a13"
 pyserde = { extras = ["yaml"], version = "^0.22.3" }
 py-gitea = "^0.2.8"
 pyyaml = "^6.0.2"
+gitpython = "^3.1.44"
+gitdb = "^4.0.12"
 
 [tool.poetry.dev-dependencies]
 hatch-vcs = "^0.4.0"

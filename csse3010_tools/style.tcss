@@ -96,7 +96,7 @@ GitSelect Input {
 }
 
 GitSelect Select {
-  max-width: 30;
+  max-width: 40;
 }
 
 GitSelect #StudentName {

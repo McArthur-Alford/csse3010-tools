@@ -1,18 +1,20 @@
+from typing import Optional
+
 from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import HorizontalScroll, Vertical, VerticalScroll, Container
 from textual.events import Resize
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Select, TabbedContent, TabPane
+from textual.widgets import Footer, Header, Select, TabbedContent, TabPane, Log
 
 from csse3010_tools.appstate import AppState
-from csse3010_tools.criteria import Rubric
+from csse3010_tools.criteria import Rubric, rubric_to_markdown_table
 from csse3010_tools.ui.banner import Banner
 from csse3010_tools.ui.build_menu import BuildMenu
 from csse3010_tools.ui.commit_hash_select import CommitHashSelect
 from csse3010_tools.ui.criteria_select import CriteriaSelect
 from csse3010_tools.ui.git_select import GitSelect
-from csse3010_tools.ui.mark_panel import MarkPanel
+from csse3010_tools.ui.mark_panel import MarkPanel, MarkSelected
 from csse3010_tools.ui.student_select import StudentNumber
 
 
@@ -25,6 +27,7 @@ class Body(Container):
                     yield CriteriaSelect()
                 with Vertical(id="mark_panel"):
                     yield MarkPanel(None)
+        yield Log()
 
 class MarkingApp(App):
     CSS_PATH = "style.tcss"
@@ -41,26 +44,15 @@ class MarkingApp(App):
 
     app_state: AppState = AppState()
     active_student: reactive[str] = reactive("")
-    active_commit: reactive[str] = reactive("")
+    active_commit: reactive[Optional[str]] = reactive(None)
     current_criteria: reactive[Rubric | None] = reactive(None)
 
-    # def on_resize(self, event: Resize):
-    #     width, height = event.size
-    #     panel = self.query_one(MenuBar)
+    @on(MarkSelected)
+    def on_mark_selected(self, _message: MarkSelected) -> None:
+        if self.current_criteria is None:
+            return
 
-    #     panel.remove_class("tight")
-    #     panel.remove_class("verytight")
-    #     if width < 60:
-    #         panel.add_class("verytight")
-    #     elif width < 90:
-    #         panel.add_class("tight")
-
-    #     if width < 120 and width < height * 2:
-    #         panel.add_class("vertical")
-    #         panel.remove_class("horizontal")
-    #     else:
-    #         panel.add_class("horizontal")
-    #         panel.remove_class("vertical")
+        print(rubric_to_markdown_table(self.current_criteria))
 
     def watch_app_state(self) -> None:
         """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
@@ -72,21 +64,34 @@ class MarkingApp(App):
             return
         print(f"Active student changed from {old} to {new}")
         commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
-        commits = [("abcdefg", "abcdefg"), ("1234567", "1234567")]
-        commit_hash_dropdown.set_options(commits)
+        commits = self.app_state.commits(self.active_student)
+        commit_hash_dropdown.set_options([(f"{commit.hash[:16]}\n{commit.date}", commit.hash) for commit in commits])
         commit_hash_dropdown.clear()
 
     @on(StudentNumber.Updated)
     def on_student_number_updated(self, message: StudentNumber.Updated) -> None:
         """User selected a valid student number."""
         self.active_student = message.number
+        self.active_commit = None
 
     @on(CommitHashSelect.Updated)
     def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
         """User selected a commit hash from the dropdown."""
         self.active_commit = message.commit_hash
         print(f"User selected commit: {self.active_commit}")
-        # TODO self.app_state.set_active_commit(...)
+        # Set the tooltip for the commit box to be the commit message
+        commits = self.app_state.commits(self.active_student)
+        commits = [commit for commit in commits if commit.hash == message.commit_hash]
+        commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
+        if len(commits) == 0:
+            commit_hash_dropdown.tooltip = ""
+            self.active_commit = None
+            return
+        commit = commits[0]
+        commit_hash_dropdown.tooltip = commit.message
+        self.active_commit = commit.hash
+        
+        self.app_state.clone_repo(self.active_student, self.active_commit)
 
     @on(CriteriaSelect.Picked)
     def on_criteria_picked(self, message: CriteriaSelect.Picked) -> None:
@@ -97,7 +102,6 @@ class MarkingApp(App):
         try:
             self.current_criteria = self.app_state.criteria(year, sem, stage)
         except FileNotFoundError:
-            # You might want to handle this more gracefully
             print(f"No criteria file found for {year}/{sem}/{stage}")
             self.current_criteria = None
 

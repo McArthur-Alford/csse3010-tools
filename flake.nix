@@ -68,6 +68,7 @@
             pkgs.python312Packages.pylsp-mypy
             pkgs.python312Packages.setuptools
             pkgs.python312Packages.textual-dev
+            pkgs.python312Packages.gitpython
           ];
         };
       }

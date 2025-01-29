@@ -1,7 +1,7 @@
 import os
+from gitea import Gitea, User, Organization, Repository
 from dataclasses import dataclass
-from typing import Dict, List
-
+from typing import Dict, List, Tuple
 from serde.yaml import from_yaml
 
 from csse3010_tools.criteria import Rubric, load_rubric_from_yaml
@@ -32,7 +32,7 @@ class AppState:
         self._gitea = GiteaInterface()
 
         # Cache of {username -> StudentObject (or dict with 'username' key, etc.)}
-        self._students: Dict[str, object] = {}
+        self._students: Dict[str, User] = {}
 
         # Cache of commits: {username -> list of Commit objects}
         self._commits_cache: Dict[str, List[Commit]] = {}
@@ -61,24 +61,6 @@ class AppState:
                 crit = load_rubric_from_yaml(data)
                 self._criteria_list.append(crit)
 
-    def _get_commits_for_student(self, student_number: str) -> List[Commit]:
-        """
-        Fetches commits from Gitea (if not cached), then returns them from cache.
-        """
-        if student_number not in self._commits_cache:
-            raw_commits = self._gitea.get_commits(student_number)
-            commits = [
-                Commit(
-                    date=c["date"],
-                    hash=c["hash"],
-                    message=c["message"],
-                    url=c["url"]
-                )
-                for c in raw_commits
-            ]
-            self._commits_cache[student_number] = commits
-        return self._commits_cache[student_number]
-
     @property
     def user(self) -> str:
         return self._gitea.get_user()
@@ -88,7 +70,20 @@ class AppState:
         return list(self._students.keys())
 
     def commits(self, student_number: str) -> List[Commit]:
-        return self._get_commits_for_student(student_number)
+        if student_number not in self._commits_cache:
+            student = self._students[student_number]
+            repo = self._gitea.get_repo(student)
+            commits: List[Commit] = [
+                Commit(
+                   item.created,
+                   item.sha,
+                   item._commit["message"],
+                   item._html_url
+               ) for item in repo.get_commits()
+            ]
+            self._commits_cache[student_number] = commits
+        return self._commits_cache[student_number]
+            
 
     def criteria(self, year: str, semester: str, task: str) -> Rubric:
         for crit in self._criteria_list:
@@ -99,7 +94,7 @@ class AppState:
 
     def clone_repo(self, student_number: str, commit_hash: str) -> None:
         local_dir = "temporary/repo"
-        self._gitea.clone_repo(student_number, commit_hash, local_dir)
+        self._gitea.clone_repo(self._students[student_number], commit_hash, local_dir)
 
     def clone_marks(self) -> None:
         local_dir = "temporary/marks"

@@ -4,7 +4,7 @@ from textual.reactive import reactive
 from textual.app import ComposeResult
 from textual.message import Message
 from textual.suggester import SuggestFromList
-from textual.validation import Regex, ValidationResult
+from textual.validation import Regex, ValidationResult, Function
 from textual import on
 
 class StudentNumber(Input):
@@ -22,7 +22,7 @@ class StudentNumber(Input):
     def on_mount(self):
         self.Changed.bubble = False
         self.placeholder = "sXXXXXXX"
-        self.validators = [Regex(r"s\d{7}")]
+        self.validators = [Regex(r"s\d{7}"), Function(lambda s: s in self.student_numbers)]
 
     def watch_student_numbers(self, old: list[str], new: list[str]):
         self.suggester = SuggestFromList(new, case_sensitive=False)
