@@ -1,0 +1,8 @@
+temporary/repo/*
+csse3010_tools/__pycache__
+csse3010_tools/ui/__pycache__
+.direnv/
+.envrc
+.access_token
+.helix
+archive/
