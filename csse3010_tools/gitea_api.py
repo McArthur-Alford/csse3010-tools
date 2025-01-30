@@ -61,7 +61,11 @@ class GiteaInterface:
         # # url = repo.get_full_name()
         # # print(url)
         # print(dir(repo))
-        url = repo.url
+        url = repo.ssh_url
+        print(repo.url)
+        print(repo.ssh_url)
+        print(repo.html_url)
+        print(repo.link)
         try:
             repo = Repo(directory)
         except:
