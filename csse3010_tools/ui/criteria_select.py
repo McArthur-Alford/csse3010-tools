@@ -32,7 +32,7 @@ class CriteriaSelect(Vertical):
         # with Horizontal(classes="metadata_field"):
         yield Label("Semester:")
         yield Select(
-            [("1", "1"), ("2", "2")],
+            [("2", "2")],
             allow_blank=False,
             id="semester_select"
         )

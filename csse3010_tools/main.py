@@ -85,6 +85,8 @@ class MarkingApp(App):
         student = self.app_state.student_name(message.number)
         student_name.value = student
 
+        self.app_state.clone_repo(self.active_student)
+
     @on(CommitHashSelect.Updated)
     def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
         """User selected a commit hash from the dropdown."""
@@ -109,6 +111,7 @@ class MarkingApp(App):
         """User changed year/semester/stage in the criteria picker."""
         year, sem, stage = message.year, message.semester, message.stage
         print(f"Criteria chosen: year={year}, semester={sem}, stage={stage}")
+        self.app_state.reload_marks(year, sem)
 
         try:
             self.current_criteria = self.app_state.criteria(year, sem, stage)

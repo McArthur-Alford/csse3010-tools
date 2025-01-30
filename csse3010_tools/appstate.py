@@ -44,6 +44,11 @@ class AppState:
         self.reload_students()
         self._load_criteria()
 
+    def reload_marks(self, year, sem):
+        url = f"git@csse3010-gitea.zones.eait.uq.edu.au:uqmdsouz/marking_sem{sem}_{year}.git"
+        # url =  f"https://csse3010-gitea.uqcloud.net/uqmdsouz/marking_sem{sem}_{year}.git"
+        self._gitea.clone_repo(url, None, "./temporary/marks")
+
     def reload_students(self):
         """Fetches all students from Gitea and caches them in a dict by username."""
         students = self._gitea.get_students()

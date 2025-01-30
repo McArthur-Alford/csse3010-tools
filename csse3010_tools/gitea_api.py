@@ -57,20 +57,24 @@ class GiteaInterface:
                 if repo.name == "repo":
                     return repo
 
-    def clone_repo(self, repo: Repository, commit_hash: str, directory: str) -> None:
-        # # url = repo.get_full_name()
-        # # print(url)
-        # print(dir(repo))
-        url = repo.ssh_url
-        print(repo.url)
-        print(repo.ssh_url)
-        print(repo.html_url)
-        print(repo.link)
+    # def get_mark_repo(self) -> Repository:
+    #     self.gitea.
+        
+    def clone_repo(self, repo, commit_hash: str, directory: str) -> None:
+        url = ""
+        if repo is Repository:
+            url = repo.ssh_url
+        else:
+            url = repo
         try:
             repo = Repo(directory)
         except:
-            os.removedirs(directory)
+            if os.path.exists(directory):
+                os.removedirs(directory)
             repo = Repo.clone_from(url, directory)
+
+        if commit_hash is not None:
+            repo.git.checkout(commit_hash)
         
         # commits = self.get_repo(student).get_commits()
         # from pprint import pprint
