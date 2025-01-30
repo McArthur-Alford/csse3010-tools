@@ -73,6 +73,7 @@ class MarkingApp(App):
         """User selected a valid student number."""
         self.active_student = message.number
         self.active_commit = None
+        self.app_state.clone_repo(self.active_student)
 
     @on(CommitHashSelect.Updated)
     def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
@@ -90,7 +91,7 @@ class MarkingApp(App):
         commit = commits[0]
         commit_hash_dropdown.tooltip = commit.message
         self.active_commit = commit.hash
-        
+
         self.app_state.clone_repo(self.active_student, self.active_commit)
 
     @on(CriteriaSelect.Picked)

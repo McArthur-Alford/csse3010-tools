@@ -1,7 +1,7 @@
 import os
 from gitea import Gitea, User, Organization, Repository
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from serde.yaml import from_yaml
 
 from csse3010_tools.criteria import Rubric, load_rubric_from_yaml
@@ -92,9 +92,12 @@ class AppState:
         print(self._criteria_list)
         raise FileNotFoundError(f"No matching criteria found for {year=}, {semester=}, {task=}")
 
-    def clone_repo(self, student_number: str, commit_hash: str) -> None:
-        local_dir = "temporary/repo"
-        self._gitea.clone_repo(self._students[student_number], commit_hash, local_dir)
+    def clone_repo(self, student_number: str, commit_hash: Optional[str] = None) -> None:
+        directory = f"./temporary/repo/{student_number}"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        repo = self._gitea.get_repo(self._students[student_number])
+        self._gitea.clone_repo(repo, commit_hash, directory)
 
     def clone_marks(self) -> None:
         local_dir = "temporary/marks"
