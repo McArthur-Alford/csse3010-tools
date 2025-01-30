@@ -1,3 +1,4 @@
+import os
 from gitea import Gitea, User, Organization, Repository, Commit
 import requests
 import re
@@ -56,16 +57,30 @@ class GiteaInterface:
                 if repo.name == "repo":
                     return repo
 
-    def clone_repo(self, student: User, commit_hash: str, directory: str) -> None:
-        commits = self.get_repo(student).get_commits()
-        from pprint import pprint
-        urls = [commit.html_url for commit in commits if commit.sha == commit_hash]
-        if len(urls) != 1:
-            print("too many or no urls matching that hash")
-            return
+    def clone_repo(self, repo: Repository, commit_hash: str, directory: str) -> None:
+        # # url = repo.get_full_name()
+        # # print(url)
+        # print(dir(repo))
+        url = repo.ssh_url
+        print(repo.url)
+        print(repo.ssh_url)
+        print(repo.html_url)
+        print(repo.link)
+        try:
+            repo = Repo(directory)
+        except:
+            os.removedirs(directory)
+            repo = Repo.clone_from(url, directory)
+        
+        # commits = self.get_repo(student).get_commits()
+        # from pprint import pprint
+        # urls = [commit.html_url for commit in commits if commit.sha == commit_hash]
+        # if len(urls) != 1:
+        #     print("too many or no urls matching that hash")
+        #     return
 
-        url = urls[0]
-        Repo.clone_from(url, directory)
+        # url = urls[0]
+        # Repo.clone_from(url, directory)
         
 
 if __name__ == "__main__":
