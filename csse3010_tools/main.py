@@ -5,7 +5,7 @@ from textual.app import App, ComposeResult
 from textual.containers import HorizontalScroll, Vertical, VerticalScroll, Container
 from textual.events import Resize
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Select, TabbedContent, TabPane, Log
+from textual.widgets import Footer, Header, Select, TabbedContent, TabPane, Log, Input
 
 from csse3010_tools.appstate import AppState
 from csse3010_tools.criteria import Rubric, rubric_to_markdown_table
@@ -27,7 +27,12 @@ class Body(Container):
                     yield CriteriaSelect()
                 with Vertical(id="mark_panel"):
                     yield MarkPanel(None)
-        yield Log()
+            with TabPane("Changelog", id="changelog"):
+                yield Log()
+            with TabPane("Run/Console", id="console"):
+                yield Log()
+            with TabPane("Code", id="viewer"):
+                yield Log()
 
 class MarkingApp(App):
     CSS_PATH = "style.tcss"
@@ -52,7 +57,9 @@ class MarkingApp(App):
         if self.current_criteria is None:
             return
 
-        print(rubric_to_markdown_table(self.current_criteria))
+        log = self.query_one(Log)
+        log.clear()
+        log.write(rubric_to_markdown_table(self.current_criteria))
 
     def watch_app_state(self) -> None:
         """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
@@ -73,6 +80,9 @@ class MarkingApp(App):
         """User selected a valid student number."""
         self.active_student = message.number
         self.active_commit = None
+        student_name = self.query_one("#StudentName", Input)
+        student = self.app_state.student_name(message.number)
+        student_name.value = student
 
     @on(CommitHashSelect.Updated)
     def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:

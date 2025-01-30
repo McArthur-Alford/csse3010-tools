@@ -69,6 +69,9 @@ class AppState:
     def student_numbers(self) -> List[str]:
         return list(self._students.keys())
 
+    def student_name(self, student_number: str) -> str:
+        return self._students[student_number].full_name
+
     def commits(self, student_number: str) -> List[Commit]:
         if student_number not in self._commits_cache:
             student = self._students[student_number]
