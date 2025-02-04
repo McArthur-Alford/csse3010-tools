@@ -1,7 +1,15 @@
-from typing import List, Dict, DefaultDict
+from typing import List, Dict, DefaultDict, Self
+from types import NotImplementedType
 from serde import serialize, deserialize, yaml, serde, field
 from serde.yaml import from_yaml, to_yaml
 from dataclasses import dataclass
+
+
+def common_entries(*dcts):
+    if not dcts:
+        return
+    for i in set(dcts[0]).intersection(*dcts[1:]):
+        yield (i,) + tuple(d[i] for d in dcts)
 
 
 @serde
@@ -10,22 +18,28 @@ class Band:
     descriptions: Dict[int, str] = field(default_factory=DefaultDict)
 
     # headings maps mark to heading (excellent, absent, etc)
-    headings: Dict[int, str] = field(init=False, default_factory=DefaultDict)
+    headings: Dict[int, str] = field(default_factory=DefaultDict)
 
     def __post_init__(self):
-        self.default_factory = lambda: dict(
-            [
-                (k, v)
-                for k, v in {
-                    0: "Absent",
-                    1: "Inadequate",
-                    2: "Insufficient",
-                    3: "Competent",
-                    4: "Proficient",
-                    5: "Exemplary",
-                }.items()
-                if k in self.descriptions.keys()
-            ]
+        headings = object.__getattribute__(self, "headings")
+        object.__setattr__(
+            self,
+            "headings",
+            dict(
+                [
+                    (k, v)
+                    for k, v in {
+                        0: "Absent",
+                        1: "Inadequate",
+                        2: "Insufficient",
+                        3: "Competent",
+                        4: "Proficient",
+                        5: "Exemplary",
+                    }.items()
+                    if k in self.descriptions.keys()
+                ],
+            )
+            | headings,
         )
 
     # the chosen mark
@@ -40,6 +54,16 @@ class Band:
         for result in self.descriptions.keys():
             m = max(m, result)
         return m
+
+    def __eq__(self, other: object) -> bool | NotImplementedType:
+        if not isinstance(other, Band):
+            return NotImplemented
+
+        return (
+            self.descriptions == other.descriptions
+            and self.headings == other.headings
+            and self.choice == other.choice
+        )
 
 
 @serde
@@ -63,10 +87,40 @@ class Task:
             marks = max(marks, b.max_marks())
         return marks
 
+    def __eq__(self, other: object) -> bool | NotImplementedType:
+        if not isinstance(other, Task):
+            return NotImplemented
+
+        return (
+            self.name == other.name
+            and self.description == other.description
+            and self.comment == other.comment
+            and self.bands == other.bands
+        )
+
 
 @serde
 class Rubric:
+    year: str
+    sem: str
+    name: str
+    yaml: str = field(default="")
     tasks: List[Task] = field(default_factory=List)
+
+    @classmethod
+    def from_file(cls, path: str) -> Self:
+        with open(path) as f:
+            return Rubric.from_yaml(f.read())  # type: ignore[return-value]
+
+    @classmethod
+    def from_yaml(cls, yaml: str) -> Self:
+        rubric = from_yaml(Rubric, yaml)
+        rubric.yaml = yaml
+        return rubric  # type: ignore[return-value]
+
+    def write_file(self, path: str):
+        with open(path, "w") as f:
+            f.write(self.into_md())
 
     def calc_marks(self) -> float:
         return sum([b.calc_marks() for b in self.tasks])
@@ -232,21 +286,49 @@ class Rubric:
     def load_yaml(self, yaml: str):
         self.tasks = []
         rubric = from_yaml(Rubric, yaml)
+        self.yaml = yaml
         self.tasks = rubric.tasks
 
     def into_yaml(self):
         return to_yaml(self)
 
+    def __eq__(self, other: object) -> bool | NotImplementedType:
+        if not isinstance(other, Rubric):
+            return NotImplemented
+
+        for task, other_task in zip(self.tasks, other.tasks):
+            if task != other_task:
+                return False
+
+        # Done recursing, just have to check fields:
+        return (
+            self.year == other.year
+            and self.sem == other.sem
+            and self.name == other.name
+        )
+
+    def compare_md(self, md: str) -> bool:
+        rubric2: Rubric = Rubric.from_yaml(self.yaml)
+        rubric2.load_md(md)
+        return self.yaml == rubric2.yaml and self == rubric2
+
 
 if __name__ == "__main__":
     rubric = Rubric(
+        year="2024",
+        sem="1",
+        name="pf",
         tasks=[
             Task(
                 name="dt1",
                 description="description",
                 comment="comment",
                 bands={
-                    "a": Band(descriptions={0: "Very good stuff overall"}, choice=0)
+                    "a": Band(
+                        descriptions={0: "Very good stuff overall"},
+                        headings={0: "magic"},
+                        choice=0,
+                    )
                 },
             ),
             Task(
@@ -260,7 +342,7 @@ if __name__ == "__main__":
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     from pprint import pprint
@@ -280,3 +362,15 @@ if __name__ == "__main__":
     print(rubric.into_md())
 
     print(rubric.into_yaml())
+
+    path = "./criteria/pf.yaml"
+    yaml_string = ""
+    with open(path, "r") as f:
+        yaml_string = f.read()
+    new_rubric = Rubric.from_yaml(yaml_string)
+
+    print(new_rubric.into_md())
+
+    print(new_rubric == new_rubric)
+
+    print(new_rubric.compare_md(new_rubric.into_md()))

@@ -26,35 +26,37 @@
           python = pkgs.python312;
           projectDir = self;
 
-          overrides = poetry2nix.overrides.withDefaults (
-            self: super: {
-              # There HAS to be a better way to handle this, rather than repeating a bunch or making a helper function
-              textual-autocomplete = super.textual-autocomplete.overridePythonAttrs (old: {
-                buildInputs = (old.buildInputs or [ ]) ++ [
-                  self.hatch-vcs
+          overrides =
+            let
+              pypkgs-build-requirements = {
+                textual-autocomplete = [
+                  "setuptools"
+                  "hatch-vcs"
                 ];
-              });
-
-              pyserde = super.pyserde.overridePythonAttrs (old: {
-                buildInputs = (old.buildInputs or [ ]) ++ [
-                  self.hatch-vcs
+                pyserde = [
+                  "hatch-vcs"
                 ];
-              });
-
-              beartype = super.beartype.overridePythonAttrs (old: {
-                buildInputs = (old.buildInputs or [ ]) ++ [
-                  self.hatch-vcs
+                textual = [ "hatch-vcs" ];
+                beartype = [ "hatch-vcs" ];
+                py-gitea = [
+                  "hatch-vcs"
+                  "setuptools"
                 ];
-              });
-
-              py-gitea = super.py-gitea.overridePythonAttrs (old: {
-                buildInputs = (old.buildInputs or [ ]) ++ [
-                  self.hatch-vcs
-                  self.setuptools
-                ];
-              });
-            }
-          );
+              };
+            in
+            poetry2nix.defaultPoetryOverrides.extend (
+              final: prev:
+              builtins.mapAttrs (
+                package: build-requirements:
+                (builtins.getAttr package prev).overridePythonAttrs (old: {
+                  buildInputs =
+                    (old.buildInputs or [ ])
+                    ++ (builtins.map (
+                      pkg: if builtins.isString pkg then builtins.getAttr pkg prev else pkg
+                    ) build-requirements);
+                })
+              ) pypkgs-build-requirements
+            );
         };
 
         devShells.default = pkgs.mkShell {
@@ -69,9 +71,6 @@
             pkgs.python312Packages.setuptools
             pkgs.python312Packages.textual-dev
             pkgs.python312Packages.gitpython
-            pkgs.python312Packages.tree-sitter
-            pkgs.python312Packages.tree-sitter-languages
-            pkgs.tree-sitter
           ];
         };
       }
