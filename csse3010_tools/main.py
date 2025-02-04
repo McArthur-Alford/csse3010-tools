@@ -5,7 +5,17 @@ from textual.app import App, ComposeResult
 from textual.containers import HorizontalScroll, Vertical, VerticalScroll, Container
 from textual.events import Resize
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Select, TabbedContent, TabPane, Log, Input, Button, Label
+from textual.widgets import (
+    Footer,
+    Header,
+    Select,
+    TabbedContent,
+    TabPane,
+    Log,
+    Input,
+    Button,
+    Label,
+)
 
 from csse3010_tools.appstate import AppState
 from csse3010_tools.criteria import Rubric, rubric_to_markdown_table
@@ -36,6 +46,7 @@ class Body(Container):
             with TabPane("Code Viewer", id="viewer"):
                 yield Log()
 
+
 class MarkingApp(App):
     CSS_PATH = "style.tcss"
     TITLE = "CSSE3010 Tools"
@@ -46,7 +57,7 @@ class MarkingApp(App):
         ("ctrl+b", "build", "Build"),
         ("ctrl+d", "deploy", "Deploy"),
         ("ctrl+c", "clean", "Clean"),
-        ("ctrl+r", "reset", "Reset")
+        ("ctrl+r", "reset", "Reset"),
     ]
 
     app_state: AppState = AppState()
@@ -59,7 +70,9 @@ class MarkingApp(App):
     def write_file(self) -> None:
         if self.current_criteria is None:
             return
-        self.app_state.write_marks(self.current_criteria, self.active_student, self.active_stage)
+        self.app_state.write_marks(
+            self.current_criteria, self.active_student, self.active_stage
+        )
 
     def sync_file(self) -> None:
         if not self.active_student or not self.active_stage:
@@ -101,7 +114,7 @@ class MarkingApp(App):
             print("Saving")
             self.write_file()
             self.sync_file()
-    
+
     @on(MarkSelected)
     def on_mark_selected(self, _message: MarkSelected) -> None:
         if self.current_criteria is None:
@@ -123,7 +136,9 @@ class MarkingApp(App):
         print(f"Active student changed from {old} to {new}")
         commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
         commits = self.app_state.commits(self.active_student)
-        commit_hash_dropdown.set_options([(f"{commit.hash[:16]}\n{commit.date}", commit.hash) for commit in commits])
+        commit_hash_dropdown.set_options(
+            [(f"{commit.hash[:16]}\n{commit.date}", commit.hash) for commit in commits]
+        )
         commit_hash_dropdown.clear()
 
     @on(StudentNumber.Updated)
@@ -213,6 +228,7 @@ class MarkingApp(App):
 def main():
     app = MarkingApp()
     app.run()
+
 
 if __name__ == "__main__":
     main()

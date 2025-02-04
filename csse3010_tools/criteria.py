@@ -2,12 +2,14 @@ import yaml
 from dataclasses import dataclass, field
 from typing import List, Optional, Union, Dict
 
+
 @dataclass
 class Requirement:
     name: str
     marks: Optional[int] = None
     description: Optional[str] = None
     defers: Optional[str] = None
+
 
 @dataclass
 class Band:
@@ -20,19 +22,23 @@ class Band:
     def max_marks(self) -> int:
         if not self.requirements:
             return 0
-        max_marks = max([
-            max([(req.marks or 0) for req in marks_dict.values()])
-            for marks_dict in self.requirements.values()
-        ])
+        max_marks = max(
+            [
+                max([(req.marks or 0) for req in marks_dict.values()])
+                for marks_dict in self.requirements.values()
+            ]
+        )
         return max_marks
 
     def min_marks(self) -> int:
         if not self.requirements:
             return 0
-        return min([
-            min((req.marks or 0) for req in marks_dict.values())
-            for marks_dict in self.requirements.values()
-        ])
+        return min(
+            [
+                min((req.marks or 0) for req in marks_dict.values())
+                for marks_dict in self.requirements.values()
+            ]
+        )
 
     def headings(self) -> Dict[int | None, str]:
         out = {}
@@ -61,9 +67,9 @@ class Band:
                 upper += 1
             elif marks_dict[chosen_mark].defers == "down":
                 lower -= 1
-            
+
             # expand the bounds until we stop hitting deferals (or out of bounds)
-            for i in range(chosen_mark+1, self.max_marks()+1, 1):
+            for i in range(chosen_mark + 1, self.max_marks() + 1, 1):
                 if i not in marks_dict:
                     break
                 req = marks_dict[i]
@@ -72,7 +78,7 @@ class Band:
                 else:
                     break
 
-            for i in range(chosen_mark-1, self.min_marks()-1, -1):
+            for i in range(chosen_mark - 1, self.min_marks() - 1, -1):
                 if i not in marks_dict:
                     break
                 req = marks_dict[i]
@@ -95,6 +101,7 @@ class Band:
                 return min([upper for (lower, upper) in bounds])
         return 0
 
+
 @dataclass
 class Task:
     name: str
@@ -106,6 +113,7 @@ class Task:
 
     def max_marks(self) -> int:
         return sum([band.max_marks() for band in self.bands])
+
 
 @dataclass
 class Rubric:
@@ -123,6 +131,7 @@ class Rubric:
     def max_marks(self) -> int:
         return sum([task.max_marks() for task in self.tasks])
 
+
 def parse_requirement(raw: Union[str, Dict[str, dict]]) -> Requirement:
     if isinstance(raw, str):
         return Requirement(name=raw)
@@ -134,13 +143,14 @@ def parse_requirement(raw: Union[str, Dict[str, dict]]) -> Requirement:
                 name=req_name,
                 marks=data.get("marks"),
                 description=data.get("description"),
-                defers=data.get("defers")
+                defers=data.get("defers"),
             )
         elif isinstance(data, str):
             return Requirement(name=req_name, description=data)
         else:
             return Requirement(name=req_name, description=str(data))
     return Requirement(name=str(raw))
+
 
 def parse_band(d: dict) -> Band:
     name = d["name"]
@@ -168,12 +178,14 @@ def parse_band(d: dict) -> Band:
                 b.chosen_marks[subband_name] = marks_in_order[-1]
     return b
 
+
 def parse_task(d: dict) -> Task:
     name = d["name"]
     bands_data = d.get("bands", [])
     bands = [parse_band(b) for b in bands_data]
     description = d.get("description", None)
     return Task(name=name, bands=bands, description=description)
+
 
 def load_rubric_from_yaml(yaml_str: str) -> Rubric:
     data = yaml.safe_load(yaml_str)
@@ -183,6 +195,7 @@ def load_rubric_from_yaml(yaml_str: str) -> Rubric:
     tasks_data = data["tasks"]
     tasks = [parse_task(t) for t in tasks_data]
     return Rubric(stage=stage, year=year, semester=semester, tasks=tasks)
+
 
 def rubric_to_markdown_table(rubric: Rubric) -> str:
     lines = []
@@ -198,6 +211,7 @@ def rubric_to_markdown_table(rubric: Rubric) -> str:
             lines.append(f"| {mark} | {mx} | {tsk} | {band.name} | {band.comment} |")
     return "\n".join(lines)
 
+
 def apply_markdown_table_to_rubric(rubric: Rubric, table: str) -> Rubric:
     def find_band_by_name(rubric: Rubric, band_name: str) -> Optional[Band]:
         for task in rubric.tasks:
@@ -205,10 +219,11 @@ def apply_markdown_table_to_rubric(rubric: Rubric, table: str) -> Rubric:
                 if b.name == band_name:
                     return b
         return None
-    lines = table.strip().split('\n')
+
+    lines = table.strip().split("\n")
     lines = lines[2:]
     for line in lines:
-        parts = line.split('|')
+        parts = line.split("|")
         parts = [p.strip() for p in parts if p.strip()]
         if len(parts) < 4:
             continue
@@ -221,6 +236,7 @@ def apply_markdown_table_to_rubric(rubric: Rubric, table: str) -> Rubric:
             continue
         band.manual_mark = mark_value
     return rubric
+
 
 sample_yaml = """
 stage: 1
@@ -274,6 +290,7 @@ if __name__ == "__main__":
     print(md)
 
     from pprint import pprint
+
     pprint(rubric)
     md = rubric_to_markdown_table(rubric)
     print(md)
@@ -286,12 +303,12 @@ if __name__ == "__main__":
     print("\nAfter changes:")
     print(rubric_to_markdown_table(rubric))
 
-#     user_table = """| Mark | Max | DT | Criteria | Comments (CID) |
-# | ---- | --- | -- | -------- | -------------- |
-# | 2 | 5 |  | Design Task 1: RCM System | Task 1.a/b |
-# | 5 | 5 |  | Design Task 2: Something Else | Task 2.a/b |
-# | 8 | 5 |  | Design Task 2: Something Else | RCM System MyLib |
-# """
+    #     user_table = """| Mark | Max | DT | Criteria | Comments (CID) |
+    # | ---- | --- | -- | -------- | -------------- |
+    # | 2 | 5 |  | Design Task 1: RCM System | Task 1.a/b |
+    # | 5 | 5 |  | Design Task 2: Something Else | Task 2.a/b |
+    # | 8 | 5 |  | Design Task 2: Something Else | RCM System MyLib |
+    # """
 
     # After reapplying the table:
     apply_markdown_table_to_rubric(rubric, md)

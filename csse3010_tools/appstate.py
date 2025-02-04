@@ -4,11 +4,16 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 from serde.yaml import from_yaml
 
-from csse3010_tools.criteria import Rubric, load_rubric_from_yaml, rubric_to_markdown_table
+from csse3010_tools.criteria import (
+    Rubric,
+    load_rubric_from_yaml,
+    rubric_to_markdown_table,
+)
 from csse3010_tools.gitea_api import GiteaInterface
 
 ROOT_DIR = "."
 CRITERIA_PATH = os.path.join(ROOT_DIR, "criteria")
+
 
 def _list_files(directory: str) -> List[str]:
     file_paths = []
@@ -17,12 +22,14 @@ def _list_files(directory: str) -> List[str]:
             file_paths.append(os.path.join(root, file))
     return file_paths
 
+
 @dataclass
 class Commit:
     date: str
     hash: str
     message: str
     url: str
+
 
 class AppState:
     def __init__(self):
@@ -65,15 +72,15 @@ class AppState:
 
     def read_marks(self, student: str, stage: str) -> str:
         """
-           reads the marks for the student, of the specific stage, as a md table 
-           student: student number minus the s
-           stage: stage number with the s
+        reads the marks for the student, of the specific stage, as a md table
+        student: student number minus the s
+        stage: stage number with the s
         """
         out = ""
         s = f"s{stage}" if stage != "pf" else "pf"
         for i in range(10):
             # i is the final digit, one of these has to match, it should be unique?
-            path = f"./temporary/marks/{student[1:]}{i}/{s}/marks.md";
+            path = f"./temporary/marks/{student[1:]}{i}/{s}/marks.md"
             if os.path.exists(path):
                 with open(path, "r") as f:
                     out = f.read()
@@ -83,7 +90,7 @@ class AppState:
     @property
     def user(self) -> str:
         return self._gitea.get_user()
-    
+
     @property
     def student_numbers(self) -> List[str]:
         return list(self._students.keys())
@@ -96,25 +103,28 @@ class AppState:
             student = self._students[student_number]
             repo = self._gitea.get_repo(student)
             commits: List[Commit] = [
-                Commit(
-                   item.created,
-                   item.sha,
-                   item._commit["message"],
-                   item._html_url
-               ) for item in repo.get_commits()
+                Commit(item.created, item.sha, item._commit["message"], item._html_url)
+                for item in repo.get_commits()
             ]
             self._commits_cache[student_number] = commits
         return self._commits_cache[student_number]
-            
 
     def criteria(self, year: str, semester: str, task: str) -> Rubric:
         for crit in self._criteria_list:
-            if (crit.year == year) and (crit.semester == semester) and (crit.stage == task):
+            if (
+                (crit.year == year)
+                and (crit.semester == semester)
+                and (crit.stage == task)
+            ):
                 return crit
         print(self._criteria_list)
-        raise FileNotFoundError(f"No matching criteria found for {year=}, {semester=}, {task=}")
+        raise FileNotFoundError(
+            f"No matching criteria found for {year=}, {semester=}, {task=}"
+        )
 
-    def clone_repo(self, student_number: str, commit_hash: Optional[str] = None) -> None:
+    def clone_repo(
+        self, student_number: str, commit_hash: Optional[str] = None
+    ) -> None:
         directory = f"./temporary/repo/{student_number}"
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -134,10 +144,9 @@ class AppState:
         s = f"s{stage}" if stage != "pf" else "pf"
         for i in range(10):
             # i is the final digit, one of these has to match, it should be unique?
-            path = f"./temporary/marks/{student_number[1:]}{i}/{s}/marks.md";
+            path = f"./temporary/marks/{student_number[1:]}{i}/{s}/marks.md"
             if os.path.exists(path):
                 with open(path) as f:
                     f.write(rubric_to_markdown_table(criteria))
-                    
 
         # self._gitea.push_marks(local_dir)

@@ -7,14 +7,16 @@ from textual.suggester import SuggestFromList
 from textual.validation import Regex, ValidationResult
 from textual import on
 
+
 class CriteriaSelect(Vertical):
     """Widget that holds 3 dropdowns (year, semester, stage).
-       On any child dropdown update, it stops the event and sends a 'Picked' event
-       with the combined year/semester/stage.
+    On any child dropdown update, it stops the event and sends a 'Picked' event
+    with the combined year/semester/stage.
     """
 
     class Picked(Message):
         """Fires when the user picks year, semester, or stage."""
+
         def __init__(self, year: str, semester: str, stage: str) -> None:
             super().__init__()
             self.year = year
@@ -24,24 +26,16 @@ class CriteriaSelect(Vertical):
     def compose(self) -> ComposeResult:
         # with Horizontal():
         yield Label("Year:")
-        yield Select(
-            [("2024", "2024")],
-            allow_blank=False,
-            id="year_select"
-        )
+        yield Select([("2024", "2024")], allow_blank=False, id="year_select")
         # with Horizontal(classes="metadata_field"):
         yield Label("Semester:")
-        yield Select(
-            [("2", "2")],
-            allow_blank=False,
-            id="semester_select"
-        )
+        yield Select([("2", "2")], allow_blank=False, id="semester_select")
         # with Horizontal(classes="metadata_field"):
         yield Label("Stage:")
         yield Select(
             [("0", "0"), ("1", "1"), ("2", "2"), ("3", "3"), ("pf", "pf")],
             allow_blank=False,
-            id="stage_select"
+            id="stage_select",
         )
         self.border_title = "Select Stage"
 

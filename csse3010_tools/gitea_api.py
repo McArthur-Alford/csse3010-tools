@@ -8,6 +8,7 @@ from git import Repo
 TOKEN_PATH = ".access_token"
 URL = "https://csse3010-gitea.uqcloud.net"
 
+
 class GiteaInterface:
     key: str
 
@@ -27,7 +28,7 @@ class GiteaInterface:
         return users
 
     def is_student(self, student: User) -> bool:
-        pattern = r's\d{7}'
+        pattern = r"s\d{7}"
         if re.search(pattern, student.username):
             return True
         else:
@@ -59,7 +60,7 @@ class GiteaInterface:
 
     # def get_mark_repo(self) -> Repository:
     #     self.gitea.
-        
+
     def clone_repo(self, repo, commit_hash: str, directory: str) -> None:
         url = ""
         if isinstance(repo, Repository):
@@ -75,7 +76,7 @@ class GiteaInterface:
 
         if commit_hash is not None:
             repo.git.checkout(commit_hash)
-        
+
         # commits = self.get_repo(student).get_commits()
         # from pprint import pprint
         # urls = [commit.html_url for commit in commits if commit.sha == commit_hash]
@@ -85,12 +86,13 @@ class GiteaInterface:
 
         # url = urls[0]
         # Repo.clone_from(url, directory)
-        
+
 
 if __name__ == "__main__":
     instance = GiteaInterface()
     students = instance.get_students()
     from pprint import pprint
+
     instance.get_repo(students[0])
     instance.get_repo(students[5])
     # orgs = instance.get_orgs(students[5])

@@ -3,27 +3,30 @@ from serde import serialize, deserialize, yaml, serde, field
 from serde.yaml import from_yaml, to_yaml
 from dataclasses import dataclass
 
+
 @serde
 class Band:
     # results maps mark to description
     descriptions: Dict[int, str] = field(default_factory=DefaultDict)
 
     # headings maps mark to heading (excellent, absent, etc)
-    headings: Dict[int, str] = field(init=false)
-
+    headings: Dict[int, str] = field(init=False, default_factory=DefaultDict)
 
     def __post_init__(self):
-        self.default_factory=lambda: dict([
-            (k, v) for k, v in {
-                0:"Absent",
-                1: "Inadequate",
-                2: "Insufficient",
-                3: "Competent",
-                4: "Proficient",
-                5: "Exemplary"
-            }.items()
-            if k in descriptions.keys()
-         ]))
+        self.default_factory = lambda: dict(
+            [
+                (k, v)
+                for k, v in {
+                    0: "Absent",
+                    1: "Inadequate",
+                    2: "Insufficient",
+                    3: "Competent",
+                    4: "Proficient",
+                    5: "Exemplary",
+                }.items()
+                if k in self.descriptions.keys()
+            ]
+        )
 
     # the chosen mark
     choice: int = field(default=0, skip=True)
@@ -37,6 +40,7 @@ class Band:
         for result in self.descriptions.keys():
             m = max(m, result)
         return m
+
 
 @serde
 class Task:
@@ -58,6 +62,7 @@ class Task:
         for b in self.bands.values():
             marks = max(marks, b.max_marks())
         return marks
+
 
 @serde
 class Rubric:
@@ -146,7 +151,7 @@ class Rubric:
                 if comment_cell.startswith("comment"):
                     task_obj.comment = cell_val
                     continue
-                
+
                 # If the cell is '-', skip updating
                 if cell_val == "-":
                     continue
@@ -165,7 +170,6 @@ class Rubric:
                 # Update the chosen mark
                 task_obj.bands[band_key].choice = chosen_val
 
-    
     def into_md(self) -> str:
         # 1) Collect all task names in order
         task_names = [task.name for task in self.tasks]
@@ -233,24 +237,37 @@ class Rubric:
     def into_yaml(self):
         return to_yaml(self)
 
+
 if __name__ == "__main__":
-    rubric = Rubric(tasks = [
-                        Task(name="dt1", description="description", comment="comment", bands = {
-                                 "a": Band(
-                                     descriptions = {0: "Very good stuff overall"},
-                                     choice = 0
-                                 )
-                             }),
-                    Task(name="dt2", description="This is dt2", comment="Slightly buggy", bands = {
-                             "a": Band(descriptions={0: "Absent", 1: "Ok", 2: "Excellent"}),
-                             "b": Band(descriptions={0: "Absent", 1: "Ok", 2: "Excellent"}, choice=1),
-                         })
-                    ])
+    rubric = Rubric(
+        tasks=[
+            Task(
+                name="dt1",
+                description="description",
+                comment="comment",
+                bands={
+                    "a": Band(descriptions={0: "Very good stuff overall"}, choice=0)
+                },
+            ),
+            Task(
+                name="dt2",
+                description="This is dt2",
+                comment="Slightly buggy",
+                bands={
+                    "a": Band(descriptions={0: "Absent", 1: "Ok", 2: "Excellent"}),
+                    "b": Band(
+                        descriptions={0: "Absent", 1: "Ok", 2: "Excellent"}, choice=1
+                    ),
+                },
+            ),
+        ]
+    )
 
     from pprint import pprint
+
     pprint(rubric)
 
-    md=rubric.into_md()
+    md = rubric.into_md()
     print(md)
 
     rubric.tasks[0].bands["a"].choice = 4

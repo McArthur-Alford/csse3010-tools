@@ -7,22 +7,28 @@ from textual.suggester import SuggestFromList
 from textual.validation import Regex, ValidationResult, Function
 from textual import on
 
+
 class StudentNumber(Input):
-    DEFAULT_CLASSES="metadata_field"
+    DEFAULT_CLASSES = "metadata_field"
 
     """Input widget for student number."""
+
     class Updated(Message):
         """Fires when the student number is changed and is valid."""
+
         def __init__(self, number: str) -> None:
             self.number = number
             super().__init__()
-    
+
     student_numbers: reactive[list[str]] = reactive([])
 
     def on_mount(self):
         self.Changed.bubble = False
         self.placeholder = "sXXXXXXX"
-        self.validators = [Regex(r"s\d{7}"), Function(lambda s: s in self.student_numbers)]
+        self.validators = [
+            Regex(r"s\d{7}"),
+            Function(lambda s: s in self.student_numbers),
+        ]
 
     def watch_student_numbers(self, old: list[str], new: list[str]):
         self.suggester = SuggestFromList(new, case_sensitive=False)
@@ -39,10 +45,11 @@ class StudentNumber(Input):
 
 
 class StudentSelect(Horizontal):
-    DEFAULT_CLASSES="metadata_field"
-    
+    DEFAULT_CLASSES = "metadata_field"
+
     """A container for label + StudentNumber in a single row."""
+
     def compose(self) -> ComposeResult:
         # with Horizontal(classes="metadata_field"):
-            # yield Label("Student Number:")
-            yield StudentNumber()
+        # yield Label("Student Number:")
+        yield StudentNumber()

@@ -8,6 +8,7 @@ from textual.widget import Widget
 
 from csse3010_tools.criteria import rubric_to_markdown_table
 
+
 class MarkPanelRaw(TextArea):
     def on_mount(self):
         self.language = "markdown"

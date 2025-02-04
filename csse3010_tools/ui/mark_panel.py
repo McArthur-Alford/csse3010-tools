@@ -7,21 +7,19 @@ from textual.widgets import Button, Collapsible, Input, Placeholder, Static, Tex
 
 from csse3010_tools.criteria import rubric_to_markdown_table
 
+
 class MarkSelected(Message):
     """Message indicating a mark button has been selected."""
 
     def __init__(
-        self, 
-        task_index: int, 
-        band_index: int, 
-        subband: int, 
-        mark: int
+        self, task_index: int, band_index: int, subband: int, mark: int
     ) -> None:
         super().__init__()
         self.task_index = task_index
         self.band_index = band_index
         self.subband = subband
-        self.mark  = mark
+        self.mark = mark
+
 
 class MarkButton(Button):
     def __init__(
@@ -32,36 +30,24 @@ class MarkButton(Button):
         subband: int,
         mark: int,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(label, *args, **kwargs)
         self.task_index = task_index
         self.band_index = band_index
-        self.subband  = subband
+        self.subband = subband
         self.mark = mark
 
     def on_click(self) -> None:
         self.post_message(
-            MarkSelected(
-                self.task_index,
-                self.band_index,
-                self.subband,
-                self.mark
-            )
+            MarkSelected(self.task_index, self.band_index, self.subband, self.mark)
         )
 
 
 class BandWidget(Grid):
     DEFAULT_CLASSES = "band"
 
-    def __init__(
-        self,
-        rubric,
-        task_index: int,
-        band_index: int,
-        *args,
-        **kwargs
-    ):
+    def __init__(self, rubric, task_index: int, band_index: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.rubric = rubric
         self.task_index = task_index
@@ -89,7 +75,7 @@ class BandWidget(Grid):
             placeholder="00",
             max_length=2,
             classes="mark",
-            id="mark_input"
+            id="mark_input",
         )
         yield self.mark_input
 
@@ -106,10 +92,7 @@ class BandWidget(Grid):
         # aaaand sub-bands
         for key in self.band.requirements:
             requirements = self.band.requirements[key]
-            yield Static(
-                f"{key}",
-                classes="subband_label"
-            )
+            yield Static(f"{key}", classes="subband_label")
             yield Static("", classes="whitespace")
 
             # Then create MarkButtons for each item in the subband
@@ -117,8 +100,10 @@ class BandWidget(Grid):
                 req = requirements.get(mark)
 
                 if req is not None:
-                    label = "<===" if req.defers == "up" else (
-                        "===>" if req.defers == "down" else req.description
+                    label = (
+                        "<==="
+                        if req.defers == "up"
+                        else ("===>" if req.defers == "down" else req.description)
                     )
 
                 #     if req.defers is not None:
@@ -135,13 +120,16 @@ class BandWidget(Grid):
                     band_index=self.band_index,
                     subband=key,
                     mark=mark,
-                    classes="marktile"
+                    classes="marktile",
                 )
                 self._mark_buttons.append(btn)
                 yield btn
 
     def on_mark_selected(self, message: MarkSelected) -> None:
-        if message.band_index != self.band_index or message.task_index != self.task_index:
+        if (
+            message.band_index != self.band_index
+            or message.task_index != self.task_index
+        ):
             return  # Not for us; ignore.
 
         # Unhighlight any MarkButton in the same subband
@@ -151,10 +139,7 @@ class BandWidget(Grid):
 
         # Highlight the clicked one
         for btn in self._mark_buttons:
-            if (
-                btn.subband  == message.subband
-                and btn.mark == message.mark
-            ):
+            if btn.subband == message.subband and btn.mark == message.mark:
                 btn.add_class("selected_markbutton")
 
     def update_band_display(self) -> None:
@@ -185,6 +170,7 @@ class TaskPanel(Collapsible):
                 # yield Static("", classes="taskdescription")
                 pass
 
+
 class MarkPanel(VerticalScroll):
     DEFAULT_CLASSES = "panel"
 
@@ -202,8 +188,8 @@ class MarkPanel(VerticalScroll):
 
         for i, task in enumerate(self.rubric.tasks):
             yield TaskPanel(
-                self.rubric, 
-                i, 
+                self.rubric,
+                i,
                 title=f"Task: {task.name}",
                 id=f"task_panel_{i}",
             )
@@ -226,7 +212,7 @@ class MarkPanel(VerticalScroll):
             task=message.task_index,
             band=message.band_index,
             subband=message.subband,
-            mark=message.mark
+            mark=message.mark,
         )
         print(
             f"""
@@ -241,6 +227,6 @@ class MarkPanel(VerticalScroll):
 
         band_widget = self.query_one(
             f"#task_panel_{message.task_index} #band_{message.band_index}",
-            expect_type=BandWidget
+            expect_type=BandWidget,
         )
         band_widget.update_band_display()
