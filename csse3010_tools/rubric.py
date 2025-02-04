@@ -20,6 +20,10 @@ class Band:
     # headings maps mark to heading (excellent, absent, etc)
     headings: Dict[int, str] = field(default_factory=DefaultDict)
 
+    # the chosen mark
+    choice: int = field(default=0, skip=True)
+    override: int | None = field(default=None, skip=True)
+
     def __post_init__(self):
         headings = object.__getattribute__(self, "headings")
         object.__setattr__(
@@ -41,10 +45,6 @@ class Band:
             )
             | headings,
         )
-
-    # the chosen mark
-    choice: int = field(default=0, skip=True)
-    override: int | None = field(default=None, skip=True)
 
     def calc_marks(self) -> float:
         return float(self.choice)
@@ -68,7 +68,6 @@ class Band:
 
 @serde
 class Task:
-    name: str = ""
     description: str = ""
     comment: str = field(default="", skip=True)
 
@@ -92,8 +91,7 @@ class Task:
             return NotImplemented
 
         return (
-            self.name == other.name
-            and self.description == other.description
+            self.description == other.description
             and self.comment == other.comment
             and self.bands == other.bands
         )
@@ -105,7 +103,7 @@ class Rubric:
     sem: str
     name: str
     yaml: str = field(default="")
-    tasks: List[Task] = field(default_factory=List)
+    tasks: Dict[str, Task] = field(default_factory=DefaultDict)
 
     @classmethod
     def from_file(cls, path: str) -> Self:
@@ -123,10 +121,10 @@ class Rubric:
             f.write(self.into_md())
 
     def calc_marks(self) -> float:
-        return sum([b.calc_marks() for b in self.tasks])
+        return sum([b.calc_marks() for b in self.tasks.values()])
 
     def max_marks(self) -> int:
-        return sum([b.max_marks() for b in self.tasks])
+        return sum([b.max_marks() for b in self.tasks.values()])
 
     def load_md(self, md: str):
         lines = md.strip().split("\n")
@@ -156,8 +154,8 @@ class Rubric:
 
         # 3) Create a map from task name -> Task object (for quick lookup)
         task_map = {}
-        for t in self.tasks:
-            task_map[t.name] = t
+        for k, t in self.tasks.items():
+            task_map[k] = t
 
         # 4) Skip the alignment line (the next line after the header)
         data_start_idx = header_idx + 2
@@ -226,11 +224,11 @@ class Rubric:
 
     def into_md(self) -> str:
         # 1) Collect all task names in order
-        task_names = [task.name for task in self.tasks]
+        task_names = [task for task in self.tasks.keys()]
 
         # 2) Collect all band keys from all tasks
         all_bands = set()
-        for task in self.tasks:
+        for task in self.tasks.values():
             for band_key in task.bands.keys():
                 all_bands.add(band_key)
         sorted_bands = sorted(all_bands)
@@ -251,7 +249,7 @@ class Rubric:
         for bkey in sorted_bands:
             row_cells = [f"{bkey}."]  # The first cell is something like 'a.', 'b.' etc.
             # For each task, show the chosen value if present, else '-'
-            for t in self.tasks:
+            for t in self.tasks.values():
                 band = t.bands.get(bkey)
                 if band is not None:
                     row_cells.append(str(band.choice))
@@ -261,7 +259,7 @@ class Rubric:
 
         # 6) Build the average row
         avg_cells = ["avg."]
-        for t in self.tasks:
+        for t in self.tasks.values():
             # collect all chosen values from the bands
             chosen_values = [band.choice for band in t.bands.values()]
             if chosen_values:
@@ -274,7 +272,7 @@ class Rubric:
 
         # 7) Build the comments row
         comment_cells = ["comments"]
-        for t in self.tasks:
+        for t in self.tasks.values():
             comment = t.comment
             comment_cells.append(comment)
         comment_row = "| " + " | ".join(comment_cells) + " |\n"
@@ -284,7 +282,7 @@ class Rubric:
         return table_md
 
     def load_yaml(self, yaml: str):
-        self.tasks = []
+        self.tasks = {}
         rubric = from_yaml(Rubric, yaml)
         self.yaml = yaml
         self.tasks = rubric.tasks
@@ -312,15 +310,20 @@ class Rubric:
         rubric2.load_md(md)
         return self.yaml == rubric2.yaml and self == rubric2
 
+    def update_mark(self, task_name: str, band_name: str, chosen_mark: int) -> None:
+        self.tasks[task_name].bands[band_name].choice = chosen_mark
+
+    def update_comment(self, task_name: str, comment: str) -> None:
+        self.tasks[task_name].comment = comment
+
 
 if __name__ == "__main__":
     rubric = Rubric(
         year="2024",
         sem="1",
         name="pf",
-        tasks=[
-            Task(
-                name="dt1",
+        tasks={
+            "dt1": Task(
                 description="description",
                 comment="comment",
                 bands={
@@ -331,8 +334,7 @@ if __name__ == "__main__":
                     )
                 },
             ),
-            Task(
-                name="dt2",
+            "dt2": Task(
                 description="This is dt2",
                 comment="Slightly buggy",
                 bands={
@@ -342,7 +344,7 @@ if __name__ == "__main__":
                     ),
                 },
             ),
-        ],
+        },
     )
 
     from pprint import pprint
@@ -352,9 +354,9 @@ if __name__ == "__main__":
     md = rubric.into_md()
     print(md)
 
-    rubric.tasks[0].bands["a"].choice = 4
-    rubric.tasks[1].bands["b"].choice = 4
-    rubric.tasks[1].comment = "yeet"
+    rubric.tasks["dt1"].bands["a"].choice = 4
+    rubric.tasks["dt2"].bands["b"].choice = 4
+    rubric.tasks["dt2"].comment = "yeet"
 
     print(rubric.into_md())
 

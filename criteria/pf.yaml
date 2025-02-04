@@ -2,7 +2,7 @@ year: "2024"
 sem: "1"
 name: pf
 tasks:
-  - name: dt1
+  dt1:
     description: "Design Task 1: RCM System (10 Marks)"
     bands:
       "a":
@@ -22,7 +22,7 @@ tasks:
           1: "Less than half working correctly."
           0: "No LED/LTA1000G functionality at all."
 
-  - name: dt2
+  dt2:
     description: "Design Task 2: RCM Radio Transmitter (5 Marks)"
     bands:
       "a":
@@ -42,7 +42,7 @@ tasks:
           1: "myconfig.h is only partially implemented."
           0: "myconfig.h is not used or implemented."
           
-  - name: mylib
+  mylib:
     description: "Mylib Task / Register Guidelines"
     bands:
       "a":
