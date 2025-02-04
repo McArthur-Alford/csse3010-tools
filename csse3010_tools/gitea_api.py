@@ -62,7 +62,7 @@ class GiteaInterface:
         
     def clone_repo(self, repo, commit_hash: str, directory: str) -> None:
         url = ""
-        if repo is Repository:
+        if isinstance(repo, Repository):
             url = repo.ssh_url
         else:
             url = repo

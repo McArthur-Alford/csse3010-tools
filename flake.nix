@@ -69,6 +69,9 @@
             pkgs.python312Packages.setuptools
             pkgs.python312Packages.textual-dev
             pkgs.python312Packages.gitpython
+            pkgs.python312Packages.tree-sitter
+            pkgs.python312Packages.tree-sitter-languages
+            pkgs.tree-sitter
           ];
         };
       }

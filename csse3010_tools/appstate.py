@@ -4,12 +4,11 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 from serde.yaml import from_yaml
 
-from csse3010_tools.criteria import Rubric, load_rubric_from_yaml
+from csse3010_tools.criteria import Rubric, load_rubric_from_yaml, rubric_to_markdown_table
 from csse3010_tools.gitea_api import GiteaInterface
 
 ROOT_DIR = "."
 CRITERIA_PATH = os.path.join(ROOT_DIR, "criteria")
-
 
 def _list_files(directory: str) -> List[str]:
     file_paths = []
@@ -18,14 +17,12 @@ def _list_files(directory: str) -> List[str]:
             file_paths.append(os.path.join(root, file))
     return file_paths
 
-
 @dataclass
 class Commit:
     date: str
     hash: str
     message: str
     url: str
-
 
 class AppState:
     def __init__(self):
@@ -65,6 +62,23 @@ class AppState:
                 data = file.read()
                 crit = load_rubric_from_yaml(data)
                 self._criteria_list.append(crit)
+
+    def read_marks(self, student: str, stage: str) -> str:
+        """
+           reads the marks for the student, of the specific stage, as a md table 
+           student: student number minus the s
+           stage: stage number with the s
+        """
+        out = ""
+        s = f"s{stage}" if stage != "pf" else "pf"
+        for i in range(10):
+            # i is the final digit, one of these has to match, it should be unique?
+            path = f"./temporary/marks/{student[1:]}{i}/{s}/marks.md";
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    out = f.read()
+
+        return out
 
     @property
     def user(self) -> str:
@@ -111,13 +125,19 @@ class AppState:
         local_dir = "temporary/marks"
         self._gitea.clone_marks(local_dir)
 
-    def write_marks(self, criteria: Rubric, student_number: str, marks) -> None:
+    def write_marks(self, criteria: Rubric, student_number: str, stage: str) -> None:
         local_dir = "temporary/marks"
 
-        self._gitea.pull_marks(local_dir)
+        # self._gitea.pull_marks(local_dir)
 
-        # Write the marks to the correct location inside the local_dir
-        # Requires converting them to .md tables and some other shenanigans
-        # TODO
+        out = ""
+        s = f"s{stage}" if stage != "pf" else "pf"
+        for i in range(10):
+            # i is the final digit, one of these has to match, it should be unique?
+            path = f"./temporary/marks/{student_number[1:]}{i}/{s}/marks.md";
+            if os.path.exists(path):
+                with open(path) as f:
+                    f.write(rubric_to_markdown_table(criteria))
+                    
 
-        self._gitea.push_marks(local_dir)
+        # self._gitea.push_marks(local_dir)

@@ -3,7 +3,7 @@ from typing import Optional
 from textual.app import ComposeResult
 from textual.containers import Grid, VerticalScroll, Container
 from textual.message import Message
-from textual.widgets import Button, Collapsible, Input, Placeholder, Static
+from textual.widgets import Button, Collapsible, Input, Placeholder, Static, TextArea
 
 from csse3010_tools.criteria import rubric_to_markdown_table
 

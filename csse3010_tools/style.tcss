@@ -290,3 +290,17 @@ MarkButton {
   margin: 0;
   height: auto;
 }
+
+SaveMenu {
+  height: 1;
+  margin-bottom: 1;
+  # margin-top: 1;
+
+  Button {
+    max-width: 8;
+  }
+}
+
+#save_label {
+  margin-left: 1;
+}

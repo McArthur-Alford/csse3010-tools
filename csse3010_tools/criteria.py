@@ -273,20 +273,27 @@ if __name__ == "__main__":
     print("Initial table:")
     print(md)
 
-    rubric.tasks[0].bands[0].chosen_marks["1.a: Movement Functions"] = 0
-    rubric.tasks[0].bands[0].chosen_marks["1.b: Status LEDs"] = 0
-    rubric.tasks[1].bands[1].chosen_marks["default"] = 0
     from pprint import pprint
     pprint(rubric)
     md = rubric_to_markdown_table(rubric)
     print(md)
 
-    user_table = """| Mark | Max | DT | Criteria | Comments (CID) |
-| ---- | --- | -- | -------- | -------------- |
-| 2 | 3 |  | FooBand |  |
-| 5 | 5 |  | BarBand |  |
-| 0 | 0 |  | AnExtra |  |
-"""
-    apply_markdown_table_to_rubric(rubric, user_table)
+    rubric.tasks[0].bands[0].chosen_marks["1.a: Movement Functions"] = 0
+    rubric.tasks[0].bands[0].chosen_marks["1.b: Status LEDs"] = 0
+    rubric.tasks[1].bands[1].chosen_marks["default"] = 0
+
+    # After Changes:
+    print("\nAfter changes:")
+    print(rubric_to_markdown_table(rubric))
+
+#     user_table = """| Mark | Max | DT | Criteria | Comments (CID) |
+# | ---- | --- | -- | -------- | -------------- |
+# | 2 | 5 |  | Design Task 1: RCM System | Task 1.a/b |
+# | 5 | 5 |  | Design Task 2: Something Else | Task 2.a/b |
+# | 8 | 5 |  | Design Task 2: Something Else | RCM System MyLib |
+# """
+
+    # After reapplying the table:
+    apply_markdown_table_to_rubric(rubric, md)
     print("\nAfter applying user table:")
     print(rubric_to_markdown_table(rubric))
