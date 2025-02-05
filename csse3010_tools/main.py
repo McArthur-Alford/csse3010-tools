@@ -18,7 +18,6 @@ from textual.widgets import (
 )
 
 from csse3010_tools.appstate import AppState
-from csse3010_tools.criteria import Rubric, rubric_to_markdown_table
 from csse3010_tools.ui.banner import Banner
 from csse3010_tools.ui.build_menu import BuildMenu
 from csse3010_tools.ui.commit_hash_select import CommitHashSelect
@@ -28,6 +27,7 @@ from csse3010_tools.ui.mark_panel import MarkPanel, MarkSelected
 from csse3010_tools.ui.student_select import StudentNumber
 from csse3010_tools.ui.mark_panel_raw import MarkPanelRaw
 from csse3010_tools.ui.saveload import SaveMenu
+from csse3010_tools.rubric import Rubric
 
 
 class Body(Container):
@@ -38,7 +38,8 @@ class Body(Container):
             with TabPane("Marking", id="marking"):
                 yield SaveMenu()
                 with Vertical(id="mark_panel"):
-                    yield MarkPanel(None)
+                    # yield MarkPanel(None)
+                    yield Label("Xnopyt")
             with TabPane("Marking Output Preview", id="markingraw"):
                 yield MarkPanelRaw()
             with TabPane("Build/Run", id="console"):
@@ -67,40 +68,40 @@ class MarkingApp(App):
     marks_changed: reactive[bool] = reactive(False)
     active_stage: reactive[str] = reactive("")
 
-    def write_file(self) -> None:
-        if self.current_criteria is None:
-            return
-        self.app_state.write_marks(
-            self.current_criteria, self.active_student, self.active_stage
-        )
+    # def write_file(self) -> None:
+    #     if self.current_criteria is None:
+    #         return
+    #     self.app_state.write_marks(
+    #         self.current_criteria, self.active_student, self.active_stage
+    #     )
 
-    def sync_file(self) -> None:
-        if not self.active_student or not self.active_stage:
-            return
+    # def sync_file(self) -> None:
+    #     if not self.active_student or not self.active_stage:
+    #         return
 
-        md = self.app_state.read_marks(self.active_student, self.active_stage)
-        if self.current_criteria is None:
-            return
+    #     md = self.app_state.read_marks(self.active_student, self.active_stage)
+    #     if self.current_criteria is None:
+    #         return
 
-        crit = rubric_to_markdown_table(self.current_criteria)
-        print(md)
-        print(crit)
-        out = ""
-        for i in range(min(len(crit), len(md))):
-            # print(md[i], crit[i], md[i] == crit[i])
-            if md[i] != crit[i]:
-                out += md[i]
-            if md[i] == "\n":
-                out += "\n"
-            else:
-                out += " "
-        print(out)
-        print(crit == md)
+    #     crit = rubric_to_markdown_table(self.current_criteria)
+    #     print(md)
+    #     print(crit)
+    #     out = ""
+    #     for i in range(min(len(crit), len(md))):
+    #         # print(md[i], crit[i], md[i] == crit[i])
+    #         if md[i] != crit[i]:
+    #             out += md[i]
+    #         if md[i] == "\n":
+    #             out += "\n"
+    #         else:
+    #             out += " "
+    #     print(out)
+    #     print(crit == md)
 
-        if crit != md:
-            self.marks_changed = True
-        else:
-            self.marks_changed = False
+    #     if crit != md:
+    #         self.marks_changed = True
+    #     else:
+    #         self.marks_changed = False
 
     def watch_marks_changed(self) -> None:
         label = self.query_one("#save_label", Label)
@@ -112,8 +113,8 @@ class MarkingApp(App):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "save":
             print("Saving")
-            self.write_file()
-            self.sync_file()
+            # self.write_file()
+            # self.sync_file()
 
     @on(MarkSelected)
     def on_mark_selected(self, _message: MarkSelected) -> None:
@@ -122,8 +123,8 @@ class MarkingApp(App):
 
         # Write the marks to the log
         markpanel = self.query_one(MarkPanelRaw)
-        markpanel.text = rubric_to_markdown_table(self.current_criteria)
-        self.sync_file()
+        markpanel.text = self.current_criteria.into_md()
+        # self.sync_file()
 
     def watch_app_state(self) -> None:
         """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
@@ -155,7 +156,7 @@ class MarkingApp(App):
 
         self.app_state.clone_repo(self.active_student)
         self.on_mark_selected(None)  # type: ignore[arg-type]
-        self.sync_file()
+        # self.sync_file()
 
     @on(CommitHashSelect.Updated)
     def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
@@ -185,7 +186,7 @@ class MarkingApp(App):
         self.app_state.reload_marks(year, sem)
 
         self.active_stage = stage
-        self.sync_file()
+        # self.sync_file()
 
         try:
             self.current_criteria = self.app_state.criteria(year, sem, stage)
@@ -204,8 +205,9 @@ class MarkingApp(App):
         for mark_panel in mark_panels:
             mark_panel.remove_children()
 
-            new_mark_panel = MarkPanel(self.current_criteria)
-            mark_panel.mount(new_mark_panel)
+            if self.current_criteria:
+                new_mark_panel = MarkPanel(self.current_criteria)
+                mark_panel.mount(new_mark_panel)
 
     def on_mount(self) -> None:
         banner = self.query_one(Banner)
@@ -232,3 +234,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# All functionality the main app needs:
+# Request the list of student numbers
+# Request the list of commits (hash, date, message) on a students repo
+# Clone a students repo with a specific student number + hash (or main)
+# Clone the marks repo
+# Write a rubric to the marks repo properly
+# Load a rubric from the marks repo properly

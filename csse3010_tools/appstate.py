@@ -4,11 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 from serde.yaml import from_yaml
 
-from csse3010_tools.criteria import (
-    Rubric,
-    load_rubric_from_yaml,
-    rubric_to_markdown_table,
-)
+from csse3010_tools.rubric import Rubric
 from csse3010_tools.gitea_api import GiteaInterface
 
 ROOT_DIR = "."
@@ -67,7 +63,7 @@ class AppState:
                 continue
             with open(path, "r") as file:
                 data = file.read()
-                crit = load_rubric_from_yaml(data)
+                crit = Rubric.from_yaml(data)
                 self._criteria_list.append(crit)
 
     def read_marks(self, student: str, stage: str) -> str:
@@ -111,11 +107,7 @@ class AppState:
 
     def criteria(self, year: str, semester: str, task: str) -> Rubric:
         for crit in self._criteria_list:
-            if (
-                (crit.year == year)
-                and (crit.semester == semester)
-                and (crit.stage == task)
-            ):
+            if (crit.year == year) and (crit.sem == semester) and (crit.name == task):
                 return crit
         print(self._criteria_list)
         raise FileNotFoundError(
@@ -147,6 +139,6 @@ class AppState:
             path = f"./temporary/marks/{student_number[1:]}{i}/{s}/marks.md"
             if os.path.exists(path):
                 with open(path) as f:
-                    f.write(rubric_to_markdown_table(criteria))
+                    f.write(Rubric.into_md(criteria))
 
         # self._gitea.push_marks(local_dir)

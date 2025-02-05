@@ -17,34 +17,9 @@ class Band:
     # results maps mark to description
     descriptions: Dict[int, str] = field(default_factory=DefaultDict)
 
-    # headings maps mark to heading (excellent, absent, etc)
-    headings: Dict[int, str] = field(default_factory=DefaultDict)
-
     # the chosen mark
     choice: int = field(default=0, skip=True)
     override: int | None = field(default=None, skip=True)
-
-    def __post_init__(self):
-        headings = object.__getattribute__(self, "headings")
-        object.__setattr__(
-            self,
-            "headings",
-            dict(
-                [
-                    (k, v)
-                    for k, v in {
-                        0: "Absent",
-                        1: "Inadequate",
-                        2: "Insufficient",
-                        3: "Competent",
-                        4: "Proficient",
-                        5: "Exemplary",
-                    }.items()
-                    if k in self.descriptions.keys()
-                ],
-            )
-            | headings,
-        )
 
     def calc_marks(self) -> float:
         return float(self.choice)
@@ -55,15 +30,14 @@ class Band:
             m = max(m, result)
         return m
 
+    def min_marks(self) -> int:
+        return min([key for key in self.descriptions.keys()])
+
     def __eq__(self, other: object) -> bool | NotImplementedType:
         if not isinstance(other, Band):
             return NotImplemented
 
-        return (
-            self.descriptions == other.descriptions
-            and self.headings == other.headings
-            and self.choice == other.choice
-        )
+        return self.descriptions == other.descriptions and self.choice == other.choice
 
 
 @serde
@@ -71,8 +45,27 @@ class Task:
     description: str = ""
     comment: str = field(default="", skip=True)
 
+    # headings maps mark to heading (excellent, absent, etc)
+    headings: Dict[int, str] = field(default_factory=DefaultDict)
+
     # Maps CID to band (e.g. a, b, c, d, etc)
     bands: Dict[str, Band] = field(default_factory=DefaultDict)
+
+    def __post_init__(self):
+        headings = object.__getattribute__(self, "headings")
+        object.__setattr__(
+            self,
+            "headings",
+            {
+                0: "Absent",
+                1: "Inadequate",
+                2: "Insufficient",
+                3: "Competent",
+                4: "Proficient",
+                5: "Exemplary",
+            }
+            | headings,
+        )
 
     def calc_marks(self) -> float:
         sum = 0.0
@@ -86,6 +79,15 @@ class Task:
             marks = max(marks, b.max_marks())
         return marks
 
+    def min_marks(self) -> int | None:
+        marks = None
+        for b in self.bands.values():
+            if marks is None:
+                marks = b.min_marks()
+            else:
+                marks = min(marks, b.min_marks())
+        return marks
+
     def __eq__(self, other: object) -> bool | NotImplementedType:
         if not isinstance(other, Task):
             return NotImplemented
@@ -93,6 +95,7 @@ class Task:
         return (
             self.description == other.description
             and self.comment == other.comment
+            and self.headings == other.headings
             and self.bands == other.bands
         )
 
@@ -326,10 +329,10 @@ if __name__ == "__main__":
             "dt1": Task(
                 description="description",
                 comment="comment",
+                headings={0: "magic"},
                 bands={
                     "a": Band(
                         descriptions={0: "Very good stuff overall"},
-                        headings={0: "magic"},
                         choice=0,
                     )
                 },

@@ -261,7 +261,7 @@ BandWidget {
   padding: 0 1;
 }
 
-Input.mark {
+Label.mark {
   padding-right: 0;
   padding-left: 1;
 }

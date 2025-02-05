@@ -29,11 +29,11 @@ class CriteriaSelect(Vertical):
         yield Select([("2024", "2024")], allow_blank=False, id="year_select")
         # with Horizontal(classes="metadata_field"):
         yield Label("Semester:")
-        yield Select([("2", "2")], allow_blank=False, id="semester_select")
+        yield Select([("1", "1")], allow_blank=False, id="semester_select")
         # with Horizontal(classes="metadata_field"):
         yield Label("Stage:")
         yield Select(
-            [("0", "0"), ("1", "1"), ("2", "2"), ("3", "3"), ("pf", "pf")],
+            [("pf", "pf")],
             allow_blank=False,
             id="stage_select",
         )
