@@ -23,7 +23,7 @@ from csse3010_tools.ui.build_menu import BuildMenu
 from csse3010_tools.ui.commit_hash_select import CommitHashSelect
 from csse3010_tools.ui.criteria_select import CriteriaSelect
 from csse3010_tools.ui.git_select import GitSelect
-from csse3010_tools.ui.mark_panel import MarkPanel, MarkSelected
+from csse3010_tools.ui.mark_panel import MarkPanel, MarkSelected, CommentInput
 from csse3010_tools.ui.student_select import StudentNumber
 from csse3010_tools.ui.mark_panel_raw import MarkPanelRaw
 from csse3010_tools.ui.saveload import SaveMenu
@@ -115,6 +115,15 @@ class MarkingApp(App):
             print("Saving")
             # self.write_file()
             # self.sync_file()
+            #
+
+    @on(CommentInput.CommentChanged)
+    def on_comment_changed(self, _message: CommentInput.CommentChanged) -> None:
+        if self.current_criteria is None:
+            return
+
+        markpanel = self.query_one(MarkPanelRaw)
+        markpanel.text = self.current_criteria.into_md()
 
     @on(MarkSelected)
     def on_mark_selected(self, _message: MarkSelected) -> None:

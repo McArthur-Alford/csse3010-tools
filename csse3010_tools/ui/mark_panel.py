@@ -1,4 +1,5 @@
 from typing import Optional, List
+from dataclasses import dataclass
 
 from textual import on
 from textual.app import ComposeResult
@@ -55,6 +56,15 @@ class MarkButton(Button):
         )
 
 
+class CommentInput(Input):
+    @dataclass
+    class CommentChanged(Message):
+        comment: str
+
+    def on_input_changed(self, message: Input.Changed) -> None:
+        self.post_message(CommentInput.CommentChanged(message.value))  # type: ignore[union-attr]
+
+
 class TaskPanel(Container):
     def __init__(self, rubric: Rubric, task_name: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,16 +73,14 @@ class TaskPanel(Container):
         self.task_obj: Task = self.rubric.tasks[self.task_name]
 
     def compose(self) -> ComposeResult:
-        # Build a collapsible (same "Task: ..." title as before)
+        # Build a collapsible
         with Collapsible(title=f"Task"):
             # Description
             if self.task_obj.description:
                 yield (Static(f"{self.task_obj.description}"))
 
-            # Create a grid that acts like the old BandWidget
             band_grid = Grid(classes="band")
             with band_grid:
-                # Same layout logic
                 cols = self.task_obj.max_marks() + 1 - (self.task_obj.min_marks() or 0)
                 band_grid.styles.grid_size_columns = cols + 1
                 grid_columns = "4" + " 1fr" * (cols)
@@ -90,7 +98,6 @@ class TaskPanel(Container):
                 # Sub-bands
                 for key, band in self.task_obj.bands.items():
                     yield (Static(f"{key}", classes="subband_label"))
-                    # yield (Static("", classes="whitespace"))
 
                     # Create a MarkButton for each heading item
                     for mark, _ in [
@@ -107,16 +114,17 @@ class TaskPanel(Container):
                             classes="marktile",
                         )
                         yield (btn)
-            # Comment
-            yield Input(
+            # Comments
+            yield CommentInput(
                 value=f"{self.task_obj.comment}",
                 placeholder="Comment",
                 classes="comment_input",
+                type="text",
             )
 
-    @on(Input.Changed, ".comment_input")
-    def on_input_changed(self, message: Input.Changed) -> None:
-        self.rubric.update_comment(self.task_name, message.value)
+    @on(CommentInput.CommentChanged)
+    def on_comment_changed(self, message: CommentInput.CommentChanged) -> None:
+        self.rubric.update_comment(self.task_name, message.comment)
 
     def on_mount(self):
         self.refresh_calculation()

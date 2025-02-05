@@ -66,11 +66,7 @@
             pkgs.ruff
             pkgs.python312Packages.python-lsp-server
             pkgs.vscode-langservers-extracted
-            pkgs.python312Packages.mypy
-            pkgs.python312Packages.pylsp-mypy
-            pkgs.python312Packages.setuptools
             pkgs.python312Packages.textual-dev
-            pkgs.python312Packages.gitpython
           ];
         };
       }
