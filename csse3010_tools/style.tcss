@@ -9,8 +9,6 @@ Body {
   margin: 1 2;
 }
 
-/* -------------------- INPUTS & BUTTONS -------------------- */
-
 Input {
   height: 1;
   border: none;
@@ -21,51 +19,29 @@ Button {
   border: none;
 }
 
-/* -------------------- SELECT & RELATED -------------------- */
-
 Select {
   height: 1;
   border: none;
   margin: 0;
   width: auto;
+
+  &:focus {
+    border: none;
+  }
+
+  &> SelectCurrent, SelectCurrent:focus {
+    border: none;
+  }
+
+  &> OptionList {
+    height: auto;
+    border: none;
+    margin: 0;
+  }
 }
 
-Select:focus {
-  border: none;
-}
-
-SelectCurrent,
-SelectCurrent:focus {
-  border: none;
-}
-
-OptionList {
-  height: auto;
-  border: none;
-  margin: 0;
-  # width: auto;
-}
 
 /* -------------------- LAYOUT -------------------- */
-
-MenuBar {
-  layout: horizontal;
-  height: auto;
-  dock: top;
-  width: 1fr;
-}
-
-#Config {
-  width: 1fr;
-  height: auto;
-}
-
-BuildMenu {
-  width: 1fr;
-  height: auto;
-  content-align: right middle;
-  layout: horizontal;
-}
 
 CriteriaSelect {
   layout: horizontal;
@@ -73,49 +49,35 @@ CriteriaSelect {
   width: 1fr;
   margin-bottom: 1;
   margin-top: 1;
-}
 
-CriteriaSelect > Select {
-  width: 1fr;
-  max-width: 20;
-  margin-right: 1;
+  & > Select {
+    width: 1fr;
+    max-width: 20;
+    margin-right: 1;
+  }
 }
 
 GitSelect {
   layout: horizontal;
   height: auto;
   margin-bottom: 1;
-}
 
-GitSelect > * {
-  height: 1;
-}
+  & Input {
+    max-width: 20;
+  }
 
-GitSelect Input {
-  max-width: 20;
-}
+  & Select {
+    max-width: 40;
+  }
 
-GitSelect Select {
-  max-width: 40;
-}
+  & #StudentName {
+    width: auto;
+    max-width: 1fr;
+  }
 
-GitSelect #StudentName {
-  width: auto;
-  max-width: 1fr;
-}
-
-CommitHashSelect {
-  # max-width: 20;
-}
-
-CommitHashSelect Select {
-  width: auto;
-}
-
-.panel {
-  border: round $border 100%;
-  box-sizing: border-box;
-  height: auto;
+  & * {
+    height: 1;
+  }
 }
 
 /* -------------------- BANNER -------------------- */
@@ -141,156 +103,6 @@ Banner {
   color: $error;
 }
 
-/* -------------------- COLLAPSIBLE -------------------- */
-
-.task_collapsible {
-  background: $background;
-  padding: 0;
-  margin: 0 1;
-  border: none;
-  width: 1fr;
-
-  &:focus-within {
-    background-tint: $background;
-  }
-
-  &.-collapsed > Contents {
-    display: none;
-  }
-}
-
-.task_collapsible > CollapsibleTitle {
-  background: $border 80%;
-  color: $block-cursor-foreground;
-  text-style: bold;
-  width: 1fr;
-  height: auto;
-  padding: 0 1 0 1;
-
-  &:hover {
-    background: $border 80%;
-    color: $surface;
-    text-style: bold;
-  }
-
-  &:focus {
-    background: $border 80%;
-    text-style: $block-cursor-text-style;
-    # background: $block-cursor-background;
-    color: $block-cursor-foreground;
-  }
-}
-
-.task_collapsible.-collapsed > CollapsibleTitle {
-  background: $surface;
-  color: $block-cursor-blurred-foreground;
-  text-style: $block-cursor-blurred-text-style;
-
-  &:hover {
-    background: $block-hover-background;
-    color: $foreground;
-  }
-
-  &:focus {
-    background: $border 35%;
-  }
-}
-
-.task_collapsible > Contents {
-  width: 1fr;
-  height: auto;
-  padding: 0 0 0 3;
-  margin: 0;
-  border: none;
-}
-
-/* -------------------- WIDGETS -------------------- */
-
-MarkPanel {
-  max-height: 1fr;
-}
-
-BandWidget {
-  width: 1fr;
-  layout: grid;
-  padding: 0;
-  margin: 0 1 1 0;
-  background: $boost;
-  grid_gutter: 0 0;
-  background: $panel;
-  border-left: outer $border 80%;
-  height: auto;
-
-  &> * {
-    width: 1fr;
-    content-align: center middle;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    border: none;
-  }
-
-  &> .marktile {
-    height: 100%;
-    background: $surface;
-    content-align: center middle;
-    border: hkey $surface 10%;
-
-    &:focus {
-      background-tint: $surface 0%;
-      background: $surface;
-      color: $foreground;
-    }
-
-    &.selected_markbutton {
-      color: $success;
-    }
-
-    &:hover {
-      border: hkey $foreground 100%;
-      background-tint: $surface 0%;
-      background: $surface;
-      tint: $background 30%;
-    }
-  }
-}
-
-.mark {
-  background: $panel;
-  box-sizing: content-box;
-  padding: 0 1;
-}
-
-Label.mark {
-  padding-right: 0;
-  padding-left: 1;
-}
-
-
-.whitespace {
-  height: 1;
-}
-
-.subband_label {
-  content-align: center middle;
-  text-align: center;
-  column_span: 3;
-  height: auto;
-  color: $foreground;
-  background: $panel;
-}
-
-.taskdescription {
-  margin: 1;
-}
-
-MarkButton {
-  # max-height: 1fr;
-  padding: 0;
-  margin: 0;
-  height: auto;
-}
-
 SaveMenu {
   height: 1;
   margin-bottom: 1;
@@ -303,4 +115,76 @@ SaveMenu {
 
 #save_label {
   margin-left: 1;
+}
+
+/* ----------------- Mark Panel ------------------ */
+
+MarkPanel {
+  max-height: 90%;
+  border-top: blank $border;
+  layout: vertical;
+}
+
+.band {
+  margin: 0 1 1 0;
+  background: $panel;
+  border-left: vkey $border 80%;
+  height: auto;
+
+  & > * {
+    content-align: center middle;
+    height: 100%;
+  }
+
+  & > .marktile {
+    height: 100%;
+    border: hkey $surface 10%;
+
+    &:focus {
+      background-tint: $surface 0%;
+      background: $surface;
+      color: $foreground;
+    }
+
+    &.selected_markbutton {
+      color: $border;
+    }
+
+    &:hover {
+      border: hkey $foreground 100%;
+      background-tint: $surface 0%;
+      background: $surface;
+      tint: $background 30%;
+    }
+  }
+}
+
+.mark {
+  padding-left: 1;
+  padding-right: 0;
+}
+
+.whitespace {
+  width: 3;
+}
+
+TaskPanel > Collapsible {
+  height: auto;
+  background: $background;
+  margin: 0 1;
+  border: none;
+  padding: 0;
+  width: 1fr;
+
+  padding-bottom: 1;
+  &.-collapsed {
+    padding-bottom: 0;
+  }
+}
+
+TaskPanel {
+  height: auto;
+}
+
+CollapsibleTitle {
 }

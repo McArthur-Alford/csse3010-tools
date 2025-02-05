@@ -1,5 +1,6 @@
 from typing import Optional, List
 
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Grid, VerticalScroll, Container
 from textual.message import Message
@@ -27,10 +28,6 @@ class MarkSelected(Message):
 
 
 class MarkButton(Button):
-    """
-    A button representing a particular mark for a (task_name, band_name).
-    """
-
     def __init__(
         self,
         label: str,
@@ -58,63 +55,74 @@ class MarkButton(Button):
         )
 
 
-class BandWidget(Grid):
-    DEFAULT_CLASSES = "band"
-
-    def __init__(self, rubric, task_name: str, *args, **kwargs):
+class TaskPanel(Container):
+    def __init__(self, rubric: Rubric, task_name: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.rubric: Rubric = rubric
-        self.task_name: str = task_name
+        self.rubric = rubric
+        self.task_name = task_name
         self.task_obj: Task = self.rubric.tasks[self.task_name]
 
     def compose(self) -> ComposeResult:
-        cols = self.task_obj.max_marks() + 1 - (self.task_obj.min_marks() or 0)
-        self.styles.grid_size_columns = cols + 4
-        grid_columns = " 1fr" * (cols + 4)
-        grid_rows = "1" + " auto" * (len(self.task_obj.bands))
-        self.styles.grid_columns = f"4 auto auto auto {grid_columns}"
-        self.styles.grid_rows = grid_rows
+        # Build a collapsible (same "Task: ..." title as before)
+        with Collapsible(title=f"Task"):
+            # Description
+            if self.task_obj.description:
+                yield (Static(f"{self.task_obj.description}"))
 
-        # Input for total marks
-        yield Label(
-            str(self.task_obj.calc_marks()),
-            classes="mark",
-        )
+            # Create a grid that acts like the old BandWidget
+            band_grid = Grid(classes="band")
+            with band_grid:
+                # Same layout logic
+                cols = self.task_obj.max_marks() + 1 - (self.task_obj.min_marks() or 0)
+                band_grid.styles.grid_size_columns = cols + 1
+                grid_columns = "4" + " 1fr" * (cols)
+                grid_rows = "1" + " auto" * (len(self.task_obj.bands))
+                band_grid.styles.grid_columns = f"{grid_columns}"
+                band_grid.styles.grid_rows = grid_rows
 
-        # Show the max possible mark
-        yield Static("/", classes="mark")
-        yield Static(f"{self.task_obj.max_marks()}", classes="mark")
-        yield Static(" ", classes="whitespace")
+                yield Static("CID")
 
-        # The first row of requirement labels
-        headings = self.task_obj.headings
-        for marks, name in headings.items():
-            yield Static(f"{name} ({marks})")
+                # Heading row
+                headings = self.task_obj.headings
+                for marks, name in headings.items():
+                    yield (Static(f"{name} ({marks})"))
 
-        # aaaand sub-bands
-        for key, band in self.task_obj.bands.items():
-            yield Static(f"{key}", classes="subband_label")
-            yield Static("", classes="whitespace")
+                # Sub-bands
+                for key, band in self.task_obj.bands.items():
+                    yield (Static(f"{key}", classes="subband_label"))
+                    # yield (Static("", classes="whitespace"))
 
-            # Then create MarkButtons for each item in the subband
-            # (remembering only to iterate the )
-            for mark, name in [
-                item
-                for item in headings.items()
-                if self.task_obj.max_marks() >= item[0]
-                and (self.task_obj.min_marks() or 0) <= item[0]
-            ]:
-                btn = MarkButton(
-                    label=band.descriptions[mark],
-                    task_name=self.task_name,
-                    band_name=key,
-                    chosen_mark=mark,
-                    classes="marktile",
-                )
-                yield btn
+                    # Create a MarkButton for each heading item
+                    for mark, _ in [
+                        item
+                        for item in headings.items()
+                        if self.task_obj.max_marks() >= item[0]
+                        and (self.task_obj.min_marks() or 0) <= item[0]
+                    ]:
+                        btn = MarkButton(
+                            label=band.descriptions[mark],
+                            task_name=self.task_name,
+                            band_name=key,
+                            chosen_mark=mark,
+                            classes="marktile",
+                        )
+                        yield (btn)
+            # Comment
+            yield Input(
+                value=f"{self.task_obj.comment}",
+                placeholder="Comment",
+                classes="comment_input",
+            )
+
+    @on(Input.Changed, ".comment_input")
+    def on_input_changed(self, message: Input.Changed) -> None:
+        self.rubric.update_comment(self.task_name, message.value)
+
+    def on_mount(self):
+        self.refresh_calculation()
 
     def on_mark_selected(self, message: MarkSelected) -> None:
-        print(message)
+        """When a MarkButton is clicked, highlight it and unhighlight others in the same sub-band."""
         if message.task_name != self.task_name:
             return  # Not for us; ignore.
 
@@ -131,44 +139,13 @@ class BandWidget(Grid):
             ):
                 btn.add_class("selected_markbutton")
 
-    def update_band_display(self) -> None:
-        self.query_one(Label).update(
-            repr(self.rubric.tasks[self.task_name].calc_marks())
-        )
-
-
-class TaskPanel(Collapsible):
-    """
-    A collapsible panel for each task. Displays the task's description, comment,
-    and one BandWidget for each band in the task.
-    """
-
-    def __init__(self, rubric, task_name: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.rubric = rubric
-        self.task_name = task_name
-        self.title = f"Task: {self.task_name}"
-
-    def compose(self) -> ComposeResult:
-        task = self.rubric.tasks[self.task_name]
-
-        # Description
-        if task.description:
-            yield Static(f"Description: {task.description}")
-
-        # Comment
-        yield Static(f"Comment: {task.comment}")
-
-        # Create a BandWidget for each band
-        yield BandWidget(self.rubric, self.task_name)
+    def refresh_calculation(self) -> None:
+        """Refresh the label that shows the total mark for this task."""
+        collapsible = self.query_one("Collapsible", Collapsible)
+        collapsible.title = f"({self.task_obj.calc_marks()}/{self.task_obj.max_marks()}) Task: {self.task_name}"
 
 
 class MarkPanel(VerticalScroll):
-    """
-    Displays all tasks in the rubric (via TaskPanels) and updates the border
-    to show total marks as they change.
-    """
-
     def __init__(self, rubric, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.rubric = rubric
@@ -211,6 +188,7 @@ class MarkPanel(VerticalScroll):
         # Recalculate the total marks in the border
         self.update_border()
 
-        for bandwidget in self.query(BandWidget):
-            if bandwidget.task_name == event.task_name:
-                bandwidget.update_band_display()
+        # Update the display for the relevant task
+        for panel in self.query(TaskPanel):
+            if panel.task_name == event.task_name:
+                panel.refresh_calculation()
