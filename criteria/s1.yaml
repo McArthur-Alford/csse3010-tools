@@ -1,0 +1,36 @@
+year: "2024"
+sem: "1"
+name: s1
+tasks:
+  dt1:
+    description: "Design Task 1: RCM System (10 Marks)"
+    bands:
+      "a":
+        descriptions:
+          5: "All movement functions fully work without errors."
+          4: "Minor issues but mostly functional."
+          3: "All movement functions are implemented but errors occur."
+          2: "More than half the movement functions are implemented with few errors."
+          1: "Less than half the movement functions are implemented and partially work."
+          0: "None of the movement functions work."
+
+  dt2:
+    description: "Design Task 2: RCM Radio Transmitter (5 Marks)"
+    bands:
+      "a":
+        descriptions:
+          5: "Radio Transmitter works correctly."
+          4: "Minor transmitter issues."
+          3: "Radio Transmitter works but with occasional errors."
+          2: "Radio Transmitter works with frequent errors."
+          1: "Radio Transmitter is partially implemented."
+          0: "Radio Transmitter is not implemented."
+      "b":
+        descriptions:
+          5: "myconfig.h is correctly used and implemented."
+          4: "Minor myconfig.h usage issues."
+          3: "myconfig.h used, but some guidelines not followed."
+          2: "myconfig.h used incorrectly or with frequent errors."
+          1: "myconfig.h is only partially implemented."
+          0: "myconfig.h is not used or implemented."
+          

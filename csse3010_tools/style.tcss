@@ -125,6 +125,10 @@ MarkPanel {
   layout: vertical;
 }
 
+MarkPanel Button {
+text-style: none;
+}
+
 .band {
   margin: 0 1 1 0;
   background: $panel;
@@ -148,6 +152,7 @@ MarkPanel {
 
     &.selected_markbutton {
       color: $border;
+      text-style: bold;
     }
 
     &:hover {

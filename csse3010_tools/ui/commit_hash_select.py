@@ -6,6 +6,7 @@ from textual.message import Message
 from textual.suggester import SuggestFromList
 from textual.validation import Regex, ValidationResult
 from textual import on
+from textual.types import NoSelection
 
 
 class CommitHashSelect(Horizontal):
@@ -30,5 +31,7 @@ class CommitHashSelect(Horizontal):
     @on(Select.Changed)
     def commit_changed(self, event: Select.Changed) -> None:
         """Send an Updated message with the newly selected commit."""
-        if event.value:
+        if event.value is NoSelection or event.value is Select.BLANK:
+            self.post_message(self.Updated(str("")))
+        elif event.value:
             self.post_message(self.Updated(str(event.value)))

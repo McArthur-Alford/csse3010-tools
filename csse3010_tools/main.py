@@ -42,7 +42,7 @@ class Body(Container):
                     yield Label("Xnopyt")
             with TabPane("Marking Output Preview", id="markingraw"):
                 yield MarkPanelRaw()
-            with TabPane("Build/Run", id="console"):
+            with TabPane("Build/Run", id="buildmenu"):
                 yield Log()
             with TabPane("Code Viewer", id="viewer"):
                 yield Log()
@@ -68,54 +68,39 @@ class MarkingApp(App):
     marks_changed: reactive[bool] = reactive(False)
     active_stage: reactive[str] = reactive("")
 
-    # def write_file(self) -> None:
-    #     if self.current_criteria is None:
-    #         return
-    #     self.app_state.write_marks(
-    #         self.current_criteria, self.active_student, self.active_stage
-    #     )
+    def write_marks(self) -> None:
+        if self.current_criteria is None or self.active_student == "":
+            print("Unable to write file")
+            return
+        self.app_state.write_marks(
+            self.current_criteria, self.active_student, self.active_stage
+        )
 
-    # def sync_file(self) -> None:
-    #     if not self.active_student or not self.active_stage:
-    #         return
-
-    #     md = self.app_state.read_marks(self.active_student, self.active_stage)
-    #     if self.current_criteria is None:
-    #         return
-
-    #     crit = rubric_to_markdown_table(self.current_criteria)
-    #     print(md)
-    #     print(crit)
-    #     out = ""
-    #     for i in range(min(len(crit), len(md))):
-    #         # print(md[i], crit[i], md[i] == crit[i])
-    #         if md[i] != crit[i]:
-    #             out += md[i]
-    #         if md[i] == "\n":
-    #             out += "\n"
-    #         else:
-    #             out += " "
-    #     print(out)
-    #     print(crit == md)
-
-    #     if crit != md:
-    #         self.marks_changed = True
-    #     else:
-    #         self.marks_changed = False
+    def load_marks(self) -> None:
+        # Load the marks from the students file into the md
+        # If there is an error with the file, override the label so the user knows
+        # But otherwise let them modify/save their own 0ed out version to fix it
+        if self.current_criteria is None or self.active_student == "":
+            print("Unable to load file")
+            return
+        md = self.app_state.read_marks(self.active_student, self.active_stage)
+        self.current_criteria.load_md(md)
+        self.build_criteria_panel()
 
     def watch_marks_changed(self) -> None:
         label = self.query_one("#save_label", Label)
-        if self.marks_changed:
-            label.update("Out of date")
-        else:
-            label.update("... not really ... :)")
+        # if self.marks_changed:
+        #     label.update("Out of date with .md file")
+        # else:
+        #     label.update("Up to date with .md file")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "save":
+        if event.button.id == "save_button":
             print("Saving")
-            # self.write_file()
-            # self.sync_file()
-            #
+            self.write_marks()
+        if event.button.id == "load_button":
+            print("Loading")
+            self.load_marks()
 
     @on(CommentInput.CommentChanged)
     def on_comment_changed(self, _message: CommentInput.CommentChanged) -> None:
@@ -124,16 +109,18 @@ class MarkingApp(App):
 
         markpanel = self.query_one(MarkPanelRaw)
         markpanel.text = self.current_criteria.into_md()
+        self.write_marks()
 
     @on(MarkSelected)
     def on_mark_selected(self, _message: MarkSelected) -> None:
-        if self.current_criteria is None:
+        if self.current_criteria is None or _message is None:
             return
 
         # Write the marks to the log
         markpanel = self.query_one(MarkPanelRaw)
         markpanel.text = self.current_criteria.into_md()
-        # self.sync_file()
+        print(_message)
+        self.write_marks()
 
     def watch_app_state(self) -> None:
         """Called whenever app_state is mutated (if we call self.mutate_reactive)."""
@@ -141,7 +128,7 @@ class MarkingApp(App):
 
     def watch_active_student(self, old: str, new: str) -> None:
         """When the user picks a new student, we can refresh the commit hash dropdown's choices."""
-        if old == new:
+        if old == new or new == "":
             return
         print(f"Active student changed from {old} to {new}")
         commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
@@ -153,24 +140,43 @@ class MarkingApp(App):
 
     @on(StudentNumber.Updated)
     def on_student_number_updated(self, message: StudentNumber.Updated) -> None:
-        """User selected a valid student number."""
-        self.active_student = message.number
-        self.active_commit = None
+        """User selected a student number."""
 
-        student_name = self.query_one("#StudentName", Input)
-        student = self.app_state.student_name(message.number)
-        student_name.value = student
+        if message.valid:
+            self.active_commit = None
+            self.active_student = message.number
 
-        self.query_one(TabbedContent).disabled = False
+            student_name = self.query_one("#StudentName", Input)
+            student = self.app_state.student_name(message.number)
+            student_name.value = student
 
-        self.app_state.clone_repo(self.active_student)
-        self.on_mark_selected(None)  # type: ignore[arg-type]
-        # self.sync_file()
+            self.query_one(TabbedContent).disabled = False
+
+            self.app_state.clone_repo(message.number)
+
+            self.load_marks()
+
+            self.query_one("#save_label", Label).update(f"Marking {message.number}")
+        else:
+            self.active_student = ""
+            self.active_commit = None
+
+            self.query_one(TabbedContent).disabled = True
+
+            self.query_one("#save_label", Label).update("No Student Selected")
 
     @on(CommitHashSelect.Updated)
     def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
         """User selected a commit hash from the dropdown."""
         self.active_commit = message.commit_hash
+        if self.active_student == "":
+            return
+
+        self.query_one("#buildmenu").disabled = False
+        if message.commit_hash == "":
+            self.query_one("#buildmenu").disabled = True
+            return
+
         print(f"User selected commit: {self.active_commit}")
         # Set the tooltip for the commit box to be the commit message
         commits = self.app_state.commits(self.active_student)
@@ -183,7 +189,6 @@ class MarkingApp(App):
         commit = commits[0]
         commit_hash_dropdown.tooltip = commit.message
         self.active_commit = commit.hash
-        self.on_mark_selected(None)  # type: ignore[arg-type]
 
         self.app_state.clone_repo(self.active_student, self.active_commit)
 
@@ -195,7 +200,6 @@ class MarkingApp(App):
         self.app_state.reload_marks(year, sem)
 
         self.active_stage = stage
-        # self.sync_file()
 
         try:
             self.current_criteria = self.app_state.criteria(year, sem, stage)
@@ -204,7 +208,7 @@ class MarkingApp(App):
             self.current_criteria = None
 
         self.build_criteria_panel()
-        self.on_mark_selected(None)  # type: ignore[arg-type]
+        self.load_marks()
 
     def build_criteria_panel(self) -> None:
         """
@@ -228,6 +232,17 @@ class MarkingApp(App):
         student_number: StudentNumber = self.query_one(StudentNumber)
         student_number.data_bind(student_numbers=self.app_state.student_numbers)
 
+        # Initially disable the buildmenu until a hash is gotten
+        self.query_one("#buildmenu").disabled = True
+
+        # Slot all the possible year/sem/stage names into the git select
+        stage_sel: Select = self.query_one("#stage_select", Select)
+        year_sel: Select = self.query_one("#year_select", Select)
+        sem_sel: Select = self.query_one("#semester_select", Select)
+        stage_sel.set_options([(i, i) for i in self.app_state.get_stages()])
+        year_sel.set_options([(i, i) for i in self.app_state.get_years()])
+        sem_sel.set_options([(i, i) for i in self.app_state.get_semesters()])
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Footer()
@@ -243,12 +258,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# All functionality the main app needs:
-# Request the list of student numbers
-# Request the list of commits (hash, date, message) on a students repo
-# Clone a students repo with a specific student number + hash (or main)
-# Clone the marks repo
-# Write a rubric to the marks repo properly
-# Load a rubric from the marks repo properly

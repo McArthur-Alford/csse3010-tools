@@ -16,8 +16,9 @@ class StudentNumber(Input):
     class Updated(Message):
         """Fires when the student number is changed and is valid."""
 
-        def __init__(self, number: str) -> None:
+        def __init__(self, number: str, valid: bool) -> None:
             self.number = number
+            self.valid = valid
             super().__init__()
 
     student_numbers: reactive[list[str]] = reactive([])
@@ -38,10 +39,12 @@ class StudentNumber(Input):
         """Checks validation, posts an Updated event if valid."""
         if event.validation_result is not None and not event.validation_result.is_valid:
             self.add_class("invalid")
+            print("Invalid student number")
+            self.post_message(self.Updated(event.value, False))
         else:
             self.remove_class("invalid")
             # Fire our custom "StudentNumber.Updated" event
-            self.post_message(self.Updated(event.value))
+            self.post_message(self.Updated(event.value, True))
 
 
 class StudentSelect(Horizontal):

@@ -1,3 +1,14 @@
+# What does the app need to do?
+# Helpers:
+# - Student number conversion (+/- s, match with wildcard last digit)
+# Actual stuff:
+# - Clone the marks repo if it isnt already there. DO NOT overwrite/pull in case of changes
+# - Get a mapping of student numbers to commits (hash + date + message)
+# - Clone a students repo with a student number and hash
+# - Load md string from marks
+# - Save md string to marks
+# - Build, Run, Flash & Clean using matts existing scripts for simplicity
+
 import os
 from gitea import Gitea, User, Organization, Repository
 from dataclasses import dataclass
@@ -66,21 +77,22 @@ class AppState:
                 crit = Rubric.from_yaml(data)
                 self._criteria_list.append(crit)
 
-    def read_marks(self, student: str, stage: str) -> str:
-        """
-        reads the marks for the student, of the specific stage, as a md table
-        student: student number minus the s
-        stage: stage number with the s
-        """
-        out = ""
-        s = f"s{stage}" if stage != "pf" else "pf"
-        for i in range(10):
-            # i is the final digit, one of these has to match, it should be unique?
-            path = f"./temporary/marks/{student[1:]}{i}/{s}/marks.md"
-            if os.path.exists(path):
-                with open(path, "r") as f:
-                    out = f.read()
+    def get_semesters(self):
+        out = []
+        for crit in self._criteria_list:
+            out.append(crit.sem)
+        return out
 
+    def get_stages(self):
+        out = []
+        for crit in self._criteria_list:
+            out.append(crit.name)
+        return out
+
+    def get_years(self):
+        out = []
+        for crit in self._criteria_list:
+            out.append(crit.year)
         return out
 
     @property
@@ -128,17 +140,34 @@ class AppState:
         self._gitea.clone_marks(local_dir)
 
     def write_marks(self, criteria: Rubric, student_number: str, stage: str) -> None:
-        local_dir = "temporary/marks"
+        s = stage.lower()
+        if stage != "pf" and s[0] != "s":
+            s = f"s{stage}"
 
-        # self._gitea.pull_marks(local_dir)
-
-        out = ""
-        s = f"s{stage}" if stage != "pf" else "pf"
         for i in range(10):
             # i is the final digit, one of these has to match, it should be unique?
             path = f"./temporary/marks/{student_number[1:]}{i}/{s}/marks.md"
             if os.path.exists(path):
-                with open(path) as f:
+                with open(path, "w") as f:
                     f.write(Rubric.into_md(criteria))
 
-        # self._gitea.push_marks(local_dir)
+    def read_marks(self, student: str, stage: str) -> str:
+        """
+        reads the marks for the student, of the specific stage, as a md table
+        student: student number minus the s
+        stage: stage number with the s
+        """
+        out = ""
+
+        s = stage.lower()
+        if stage != "pf" and s[0] != "s":
+            s = f"s{stage}"
+
+        for i in range(10):
+            # i is the final digit, one of these has to match, it should be unique?
+            path = f"./temporary/marks/{student[1:]}{i}/{s}/marks.md"
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    out = f.read()
+
+        return out

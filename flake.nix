@@ -20,9 +20,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         poetry2nix = inputs.poetry2nix.lib.mkPoetry2Nix { inherit pkgs; };
-      in
-      {
-        packages.default = poetry2nix.mkPoetryApplication {
+        poetryPkg = poetry2nix.mkPoetryApplication {
           python = pkgs.python312;
           projectDir = self;
 
@@ -58,6 +56,14 @@
               ) pypkgs-build-requirements
             );
         };
+      in
+      {
+        apps.default = {
+          type = "app";
+          program = "${poetryPkg}/bin/main";
+        };
+
+        packages.default = poetryPkg;
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ self.packages.${system}.default ];

@@ -113,6 +113,8 @@ class TaskPanel(Container):
                             chosen_mark=mark,
                             classes="marktile",
                         )
+                        if self.rubric.tasks[self.task_name].bands[key].choice == mark:
+                            btn.add_class("selected_markbutton")
                         yield (btn)
             # Comments
             yield CommentInput(
