@@ -1,6 +1,8 @@
+import os
+
 from typing import Optional
 
-from textual import on
+from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import HorizontalScroll, Vertical, VerticalScroll, Container
 from textual.events import Resize
@@ -27,6 +29,7 @@ from csse3010_tools.ui.mark_panel import MarkPanel, MarkSelected, CommentInput
 from csse3010_tools.ui.student_select import StudentNumber
 from csse3010_tools.ui.mark_panel_raw import MarkPanelRaw
 from csse3010_tools.ui.saveload import SaveMenu
+from csse3010_tools.gitea_api import gitea_clone_repo
 from csse3010_tools.rubric import Rubric
 
 
@@ -139,7 +142,7 @@ class MarkingApp(App):
         commit_hash_dropdown.clear()
 
     @on(StudentNumber.Updated)
-    def on_student_number_updated(self, message: StudentNumber.Updated) -> None:
+    async def on_student_number_updated(self, message: StudentNumber.Updated) -> None:
         """User selected a student number."""
 
         if message.valid:
@@ -152,7 +155,7 @@ class MarkingApp(App):
 
             self.query_one(TabbedContent).disabled = False
 
-            self.app_state.clone_repo(message.number)
+            self.clone_repo(message.number)
 
             self.load_marks()
 
@@ -165,8 +168,18 @@ class MarkingApp(App):
 
             self.query_one("#save_label", Label).update("No Student Selected")
 
+    @work(exclusive=True, thread=True)
+    def clone_repo(
+        self, student_number: str, commit_hash: Optional[str] = None
+    ) -> None:
+        directory = f"./temporary/repo/{student_number}"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        repo = self.app_state._gitea.get_repo(self.app_state._students[student_number])
+        gitea_clone_repo(repo, commit_hash, directory)
+
     @on(CommitHashSelect.Updated)
-    def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
+    async def on_commit_hash_updated(self, message: CommitHashSelect.Updated) -> None:
         """User selected a commit hash from the dropdown."""
         self.active_commit = message.commit_hash
         if self.active_student == "":
@@ -190,7 +203,7 @@ class MarkingApp(App):
         commit_hash_dropdown.tooltip = commit.message
         self.active_commit = commit.hash
 
-        self.app_state.clone_repo(self.active_student, self.active_commit)
+        self.clone_repo(self.active_student, self.active_commit)
 
     @on(CriteriaSelect.Picked)
     def on_criteria_picked(self, message: CriteriaSelect.Picked) -> None:

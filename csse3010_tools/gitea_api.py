@@ -9,6 +9,26 @@ TOKEN_PATH = ".access_token"
 URL = "https://csse3010-gitea.uqcloud.net"
 
 
+def gitea_clone_repo(repo, commit_hash: str, directory: str) -> None:
+    url = ""
+    if isinstance(repo, Repository):
+        url = repo.ssh_url
+    else:
+        url = repo
+    try:
+        repo = Repo(directory)
+    except:
+        if os.path.exists(directory):
+            os.removedirs(directory)
+        try:
+            repo = Repo.clone_from(url, directory)
+        except:
+            print("Marks repo doesnt exist!")
+
+    if commit_hash is not None:
+        repo.git.checkout(commit_hash)
+
+
 class GiteaInterface:
     key: str
 
@@ -61,31 +81,15 @@ class GiteaInterface:
     # def get_mark_repo(self) -> Repository:
     #     self.gitea.
 
-    def clone_repo(self, repo, commit_hash: str, directory: str) -> None:
-        url = ""
-        if isinstance(repo, Repository):
-            url = repo.ssh_url
-        else:
-            url = repo
-        try:
-            repo = Repo(directory)
-        except:
-            if os.path.exists(directory):
-                os.removedirs(directory)
-            repo = Repo.clone_from(url, directory)
+    # commits = self.get_repo(student).get_commits()
+    # from pprint import pprint
+    # urls = [commit.html_url for commit in commits if commit.sha == commit_hash]
+    # if len(urls) != 1:
+    #     print("too many or no urls matching that hash")
+    #     return
 
-        if commit_hash is not None:
-            repo.git.checkout(commit_hash)
-
-        # commits = self.get_repo(student).get_commits()
-        # from pprint import pprint
-        # urls = [commit.html_url for commit in commits if commit.sha == commit_hash]
-        # if len(urls) != 1:
-        #     print("too many or no urls matching that hash")
-        #     return
-
-        # url = urls[0]
-        # Repo.clone_from(url, directory)
+    # url = urls[0]
+    # Repo.clone_from(url, directory)
 
 
 if __name__ == "__main__":

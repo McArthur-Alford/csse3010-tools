@@ -16,7 +16,7 @@ from typing import Dict, List, Tuple, Optional
 from serde.yaml import from_yaml
 
 from csse3010_tools.rubric import Rubric
-from csse3010_tools.gitea_api import GiteaInterface
+from csse3010_tools.gitea_api import GiteaInterface, gitea_clone_repo
 
 ROOT_DIR = "."
 CRITERIA_PATH = os.path.join(ROOT_DIR, "criteria")
@@ -58,7 +58,7 @@ class AppState:
     def reload_marks(self, year, sem):
         url = f"git@csse3010-gitea.zones.eait.uq.edu.au:uqmdsouz/marking_sem{sem}_{year}.git"
         # url =  f"https://csse3010-gitea.uqcloud.net/uqmdsouz/marking_sem{sem}_{year}.git"
-        self._gitea.clone_repo(url, None, "./temporary/marks")
+        gitea_clone_repo(url, None, f"./temporary/marks")
 
     def reload_students(self):
         """Fetches all students from Gitea and caches them in a dict by username."""
@@ -126,15 +126,6 @@ class AppState:
             f"No matching criteria found for {year=}, {semester=}, {task=}"
         )
 
-    def clone_repo(
-        self, student_number: str, commit_hash: Optional[str] = None
-    ) -> None:
-        directory = f"./temporary/repo/{student_number}"
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        repo = self._gitea.get_repo(self._students[student_number])
-        self._gitea.clone_repo(repo, commit_hash, directory)
-
     def clone_marks(self) -> None:
         local_dir = "temporary/marks"
         self._gitea.clone_marks(local_dir)
@@ -169,5 +160,10 @@ class AppState:
             if os.path.exists(path):
                 with open(path, "r") as f:
                     out = f.read()
+
+        print("Out was:")
+        print("Out was:")
+        print("Out was:")
+        print(out)
 
         return out
