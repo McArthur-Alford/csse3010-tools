@@ -116,6 +116,9 @@ class Rubric:
     yaml: str = field(default="")
     tasks: Dict[str, Task] = field(default_factory=DefaultDict)
 
+    def __post_init__(self):
+        self._callback = None
+
     @classmethod
     def from_file(cls, path: str) -> Self:
         with open(path) as f:
@@ -182,7 +185,12 @@ class Rubric:
                 break
 
             # Split by '|' and strip
-            row_cells = [c.strip() for c in line.split("|") if c.strip()]
+            print("ROW CELLS HERE NERD:")
+            print(line)
+            row_cells = [c.strip() for c in line.split("|")]
+            print(row_cells)
+            row_cells = row_cells[1 : (len(row_cells) - 1)]
+            print(row_cells)
 
             # If there are not enough cells, skip
             if len(row_cells) < 2:
@@ -215,6 +223,9 @@ class Rubric:
                     continue
 
                 if comment_cell.startswith("comment"):
+                    print(task_names)
+                    print(task_obj)
+                    print(cell_val)
                     task_obj.comment = cell_val
                     continue
 
@@ -326,13 +337,25 @@ class Rubric:
 
     def update_mark(self, task_name: str, band_name: str, chosen_mark: int) -> None:
         self.tasks[task_name].bands[band_name].choice = chosen_mark
+        print(f"update_mark({task_name}, {band_name}, {chosen_mark})")
+        self._notify_changed()
 
     def update_comment(self, task_name: str, comment: str) -> None:
         self.tasks[task_name].comment = comment
+        print(f"update_comment({task_name}, {comment})")
+        self._notify_changed()
 
     def clear_marks(self) -> None:
         for task in self.tasks.values():
             task.clear_marks()
+
+    def on_change(self, callback):
+        self._callback = callback
+
+    def _notify_changed(self):
+        print(f"notify_changed, callback: {self._callback}")
+        if self._callback is not None:
+            self._callback()
 
 
 if __name__ == "__main__":

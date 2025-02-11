@@ -41,6 +41,7 @@ class AppState:
         self._stage: Optional[str] = None
         self._student_number: Optional[str] = None
         self._commit_hash: Optional[str] = None
+        self._rubric: Optional[Rubric] = None
 
         # Gitea client
         self._gitea = self._init_gitea()
@@ -63,6 +64,7 @@ class AppState:
         if value != self._year:
             self._year = value
             self._clone_marks_repo_if_ready()
+            self._reload_rubric()
 
     @property
     def semester(self) -> Optional[str]:
@@ -73,6 +75,7 @@ class AppState:
         if value != self._semester:
             self._semester = value
             self._clone_marks_repo_if_ready()
+            self._reload_rubric()
 
     @property
     def stage(self) -> Optional[str]:
@@ -81,6 +84,7 @@ class AppState:
     @stage.setter
     def stage(self, value: str):
         self._stage = value
+        self._reload_rubric()
 
     @property
     def student_number(self) -> Optional[str]:
@@ -92,6 +96,7 @@ class AppState:
             self._student_number = value
             self._commit_hash = None  # Clear the commit hash to avoid confusion
             self._clone_student_repo()
+            self._reload_rubric()
 
     @property
     def commit_hash(self) -> Optional[str]:
@@ -102,6 +107,17 @@ class AppState:
         if value != self._commit_hash:
             self._commit_hash = value
             self._clone_student_repo()
+
+    @property
+    def rubric(self) -> Optional[Rubric]:
+        """Returns the currently loaded rubric, if any"""
+        return self._rubric
+
+    @rubric.setter
+    def rubric(self, value: Rubric):
+        self._rubric = value
+        self._rubric.on_change(self._write_marks)
+        self._write_marks()
 
     def get_semesters(self) -> List[str]:
         """
@@ -146,42 +162,6 @@ class AppState:
             f"No matching criteria found for {year=}, {semester=}, {task=}"
         )
 
-    def read_marks(self, student_number: str, stage: str) -> str:
-        """
-        Reads the marks for the given student_number and stage from the
-        local cloned marks repository, returning the raw markdown string.
-        """
-        marks_dir = self._marks_directory
-        stage_dir = self._normalize_stage_dir(stage)
-        student_id = student_number[1:]  # e.g. strip 's' from 's1234567'
-
-        for i in range(10):
-            path = os.path.join(marks_dir, f"{student_id}{i}", stage_dir, "marks.md")
-            if os.path.exists(path):
-                with open(path, "r") as f:
-                    return f.read()
-        return ""
-
-    def write_marks(self, rubric: Rubric, student_number: str, stage: str) -> None:
-        """
-        Writes the given Rubric object as markdown to the marks.md file
-        for the specified student_number and stage.
-        """
-        marks_dir = self._marks_directory
-        stage_dir = self._normalize_stage_dir(stage)
-        md_content = Rubric.into_md(rubric)
-        student_id = student_number[1:]  # e.g. strip 's' from 's1234567'
-
-        for i in range(10):
-            path = os.path.join(marks_dir, f"{student_id}{i}", stage_dir, "marks.md")
-            if os.path.exists(path):
-                with open(path, "w") as f:
-                    f.write(md_content)
-                    print(f"Wrote marks to {path}")
-                return  # Once we find and write, we're done.
-
-        print(f"Failed to write marks for {student_number}")
-
     def list_commits(self, student_number: str) -> List[CommitInfo]:
         """
         Returns a list of the commits from the student's 'repo' repository,
@@ -209,6 +189,49 @@ class AppState:
             self._commits_cache[student_number] = commits
 
         return self._commits_cache[student_number]
+
+    def _read_marks(self) -> str:
+        """
+        Reads the marks for the given student_number and stage from the
+        local cloned marks repository, returning the raw markdown string.
+        """
+        if not self._student_number or not self._stage:
+            return
+
+        marks_dir = self._marks_directory
+        stage_dir = self._normalize_stage_dir(self._stage)
+        student_id = self._student_number[1:]  # e.g. strip 's' from 's1234567'
+
+        for i in range(10):
+            path = os.path.join(marks_dir, f"{student_id}{i}", stage_dir, "marks.md")
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return f.read()
+        return ""
+
+    def _write_marks(self) -> None:
+        """
+        Writes the given Rubric object as markdown to the marks.md file
+        for the specified student_number and stage.
+        """
+        if not self._stage or not self._student_number or not self._rubric:
+            return
+
+        marks_dir = self._marks_directory
+        stage_dir = self._normalize_stage_dir(self._stage)
+        md_content = Rubric.into_md(self._rubric)
+        student_id = self._student_number[1:]  # e.g. strip 's' from 's1234567'
+
+        for i in range(10):
+            path = os.path.join(marks_dir, f"{student_id}{i}", stage_dir)
+            if os.path.exists(path):
+                path = os.path.join(path, "marks.md")
+                with open(path, "w") as f:
+                    f.write(md_content)
+                    print(f"Wrote marks to {path}")
+                return  # Once we find and write, we're done.
+
+        print(f"Failed to write marks for {self._student_number}")
 
     def _init_gitea(self) -> Gitea:
         """
@@ -249,6 +272,35 @@ class AppState:
     def _clone_marks_repo_if_ready(self):
         if self._year and self._semester:
             self._clone_marks_repo()
+
+    def _reload_rubric(self) -> None:
+        """
+        Try to load the rubric for the current year/semester/stage from .yaml.
+        If found, store it in self._rubric. If not found, set self._rubric = None.
+        If we have a student set, also read the student's existing marks from .md
+        into the rubric, then write it back to ensure everything stays synced.
+        """
+        if not all([self._year, self._semester, self._stage]):
+            self._rubric = None
+            return
+
+        # Attempt to load from YAML
+        try:
+            loaded = self.get_criteria(self._year, self._semester, self._stage)
+        except FileNotFoundError:
+            print(f"No matching rubric for {self._year}/{self._semester}/{self._stage}")
+            self._rubric = None
+            return
+
+        loaded.clear_marks()
+
+        # If we have a student selected, try to read that student's .md
+        if self._student_number:
+            existing_md = self._read_marks()
+            if existing_md:
+                loaded.load_md(existing_md)
+
+        self.rubric = loaded
 
     def _clone_student_repo(self) -> None:
         """
@@ -365,17 +417,9 @@ if __name__ == "__main__":
     # Setting year/semester triggers marks repo cloning automatically
     app_state.year = "2024"
     app_state.semester = "2"
+    app_state.stage = "pf"
 
-    # Check loaded rubrics
     print("Available years:", app_state.get_years())
     print("Available semesters:", app_state.get_semesters())
     print("Available stages:", app_state.get_stages())
-
-    # Example: reading/writing marks for a single student, stage
-    app_state.write_marks(
-        rubric=Rubric(name="S2", year="2024", sem="2"),
-        student_number="s4801806",
-        stage="2",
-    )
-    md_content = app_state.read_marks("s1234567", "2")
-    print("Read back marks:\n", md_content)
+    print(f"Loaded rubric:\n{app_state.rubric.into_md()}")
