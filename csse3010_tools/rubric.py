@@ -39,6 +39,9 @@ class Band:
 
         return self.descriptions == other.descriptions and self.choice == other.choice
 
+    def clear_marks(self) -> None:
+        self.choice = 0
+
 
 @serde
 class Task:
@@ -99,6 +102,11 @@ class Task:
             and self.bands == other.bands
         )
 
+    def clear_marks(self) -> None:
+        for band in self.bands.values():
+            self.comment = ""
+            band.clear_marks()
+
 
 @serde
 class Rubric:
@@ -132,6 +140,7 @@ class Rubric:
     def load_md(self, md: str):
         lines = md.strip().split("\n")
         if not lines:
+            self.clear_marks()
             return  # Nothing to parse
 
         # 1) Find the header line that starts with '| cid'
@@ -143,6 +152,7 @@ class Rubric:
 
         if header_idx is None:
             # No recognizable header found, nothing to load
+            self.clear_marks()
             return
 
         # 2) Parse the header line to get the column names
@@ -152,6 +162,7 @@ class Rubric:
 
         # The first cell should be 'cid', and the rest are the task descriptions
         if not header_cells or header_cells[0].lower() != "cid":
+            self.clear_marks()
             return
         task_names = header_cells[1:]  # everything after 'cid'
 
@@ -318,6 +329,10 @@ class Rubric:
 
     def update_comment(self, task_name: str, comment: str) -> None:
         self.tasks[task_name].comment = comment
+
+    def clear_marks(self) -> None:
+        for task in self.tasks.values():
+            task.clear_marks()
 
 
 if __name__ == "__main__":
