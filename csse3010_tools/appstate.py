@@ -1,28 +1,23 @@
-# What does the app need to do?
-# Helpers:
-# - Student number conversion (+/- s, match with wildcard last digit)
-# Actual stuff:
-# - Clone the marks repo if it isnt already there. DO NOT overwrite/pull in case of changes
-# - Get a mapping of student numbers to commits (hash + date + message)
-# - Clone a students repo with a student number and hash
-# - Load md string from marks
-# - Save md string to marks
-# - Build, Run, Flash & Clean using matts existing scripts for simplicity
-
+import shutil
 import os
-from gitea import Gitea, User, Organization, Repository
+import re
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
+
+from git import Repo
+from gitea import Gitea, User, Organization, Repository, Commit
 from serde.yaml import from_yaml
 
 from csse3010_tools.rubric import Rubric
-from csse3010_tools.gitea_api import GiteaInterface, gitea_clone_repo
 
-ROOT_DIR = "."
-CRITERIA_PATH = os.path.join(ROOT_DIR, "criteria")
+TOKEN_PATH = ".access_token"
+GITEA_URL = "https://csse3010-gitea.uqcloud.net"
 
 
 def _list_files(directory: str) -> List[str]:
+    """
+    Recursively list all files in the given directory.
+    """
     file_paths = []
     for root, _, files in os.walk(directory):
         for file in files:
@@ -31,7 +26,7 @@ def _list_files(directory: str) -> List[str]:
 
 
 @dataclass
-class Commit:
+class CommitInfo:
     date: str
     hash: str
     message: str
@@ -40,130 +35,347 @@ class Commit:
 
 class AppState:
     def __init__(self):
-        self._gitea = GiteaInterface()
+        # Internal "state" fields
+        self._year: Optional[str] = None
+        self._semester: Optional[str] = None
+        self._stage: Optional[str] = None
+        self._student_number: Optional[str] = None
+        self._commit_hash: Optional[str] = None
 
-        # Cache of {username -> StudentObject (or dict with 'username' key, etc.)}
+        # Gitea client
+        self._gitea = self._init_gitea()
+
+        # In-memory caches
         self._students: Dict[str, User] = {}
-
-        # Cache of commits: {username -> list of Commit objects}
-        self._commits_cache: Dict[str, List[Commit]] = {}
-
-        # Cache of all loaded Criteria objects
         self._criteria_list: List[Rubric] = []
+        self._commits_cache: Dict[str, List[CommitInfo]] = {}
 
-        # Load them all at init time
-        self.reload_students()
+        # Initial loading
+        self._load_students()
         self._load_criteria()
 
-    def reload_marks(self, year, sem):
-        url = f"git@csse3010-gitea.zones.eait.uq.edu.au:uqmdsouz/marking_sem{sem}_{year}.git"
-        # url =  f"https://csse3010-gitea.uqcloud.net/uqmdsouz/marking_sem{sem}_{year}.git"
-        gitea_clone_repo(url, None, f"./temporary/marks")
+    @property
+    def year(self) -> Optional[str]:
+        return self._year
 
-    def reload_students(self):
-        """Fetches all students from Gitea and caches them in a dict by username."""
-        students = self._gitea.get_students()
-        self._students = {student.username: student for student in students}
-
-    def _load_criteria(self):
-        """Loads all .yaml criteria files into memory for quick searching."""
-        all_paths = _list_files(CRITERIA_PATH)
-        self._criteria_list = []
-        for path in all_paths:
-            if not path.endswith(".yaml"):
-                continue
-            with open(path, "r") as file:
-                data = file.read()
-                crit = Rubric.from_yaml(data)
-                self._criteria_list.append(crit)
-
-    def get_semesters(self):
-        out = []
-        for crit in self._criteria_list:
-            out.append(crit.sem)
-        return out
-
-    def get_stages(self):
-        out = []
-        for crit in self._criteria_list:
-            out.append(crit.name)
-        return out
-
-    def get_years(self):
-        out = []
-        for crit in self._criteria_list:
-            out.append(crit.year)
-        return out
+    @year.setter
+    def year(self, value: str):
+        if value != self._year:
+            self._year = value
+            self._clone_marks_repo_if_ready()
 
     @property
-    def user(self) -> str:
-        return self._gitea.get_user()
+    def semester(self) -> Optional[str]:
+        return self._semester
+
+    @semester.setter
+    def semester(self, value: str):
+        if value != self._semester:
+            self._semester = value
+            self._clone_marks_repo_if_ready()
 
     @property
-    def student_numbers(self) -> List[str]:
+    def stage(self) -> Optional[str]:
+        return self._stage
+
+    @stage.setter
+    def stage(self, value: str):
+        self._stage = value
+
+    @property
+    def student_number(self) -> Optional[str]:
+        return self._student_number
+
+    @student_number.setter
+    def student_number(self, value: str):
+        if value != self._student_number:
+            self._student_number = value
+            self._commit_hash = None  # Clear the commit hash to avoid confusion
+            self._clone_student_repo()
+
+    @property
+    def commit_hash(self) -> Optional[str]:
+        return self._commit_hash
+
+    @commit_hash.setter
+    def commit_hash(self, value: str):
+        if value != self._commit_hash:
+            self._commit_hash = value
+            self._clone_student_repo()
+
+    def get_semesters(self) -> List[str]:
+        """
+        Returns the distinct semesters across all loaded criteria.
+        """
+        return sorted(list({crit.sem for crit in self._criteria_list}))
+
+    def get_years(self) -> List[str]:
+        """
+        Returns the distinct years across all loaded criteria.
+        """
+        return sorted(list({crit.year for crit in self._criteria_list}))
+
+    def get_stages(self) -> List[str]:
+        """
+        Returns the distinct stage names (like S1, PF, etc.) across all loaded criteria.
+        """
+        return sorted(list({crit.name for crit in self._criteria_list}))
+
+    def list_student_numbers(self) -> List[str]:
+        """
+        Returns all known student usernames/numbers (e.g., s1234567).
+        """
         return list(self._students.keys())
 
-    def student_name(self, student_number: str) -> str:
-        return self._students[student_number].full_name
+    def get_student_name(self, student_number: str) -> Optional[str]:
+        """
+        Returns the full name for the given student number, if known.
+        """
+        user = self._students.get(student_number)
+        return user.full_name if user else None
 
-    def commits(self, student_number: str) -> List[Commit]:
-        if student_number not in self._commits_cache:
-            student = self._students[student_number]
-            repo = self._gitea.get_repo(student)
-            commits: List[Commit] = [
-                Commit(item.created, item.sha, item._commit["message"], item._html_url)
-                for item in repo.get_commits()
-            ]
-            self._commits_cache[student_number] = commits
-        return self._commits_cache[student_number]
-
-    def criteria(self, year: str, semester: str, task: str) -> Rubric:
+    def get_criteria(self, year: str, semester: str, task: str) -> Rubric:
+        """
+        Searches loaded rubrics for one matching the given year, semester, and task (stage).
+        Raises FileNotFoundError if no matching rubric is found.
+        """
         for crit in self._criteria_list:
-            if (crit.year == year) and (crit.sem == semester) and (crit.name == task):
+            if crit.year == year and crit.sem == semester and crit.name == task:
                 return crit
-        print(self._criteria_list)
         raise FileNotFoundError(
             f"No matching criteria found for {year=}, {semester=}, {task=}"
         )
 
-    def clone_marks(self) -> None:
-        local_dir = "temporary/marks"
-        self._gitea.clone_marks(local_dir)
-
-    def write_marks(self, criteria: Rubric, student_number: str, stage: str) -> None:
-        s = stage.lower()
-        if stage != "pf" and s[0] != "s":
-            s = f"s{stage}"
+    def read_marks(self, student_number: str, stage: str) -> str:
+        """
+        Reads the marks for the given student_number and stage from the
+        local cloned marks repository, returning the raw markdown string.
+        """
+        marks_dir = self._marks_directory
+        stage_dir = self._normalize_stage_dir(stage)
+        student_id = student_number[1:]  # e.g. strip 's' from 's1234567'
 
         for i in range(10):
-            # i is the final digit, one of these has to match, it should be unique?
-            path = f"./temporary/marks/{student_number[1:]}{i}/{s}/marks.md"
-            if os.path.exists(path):
-                with open(path, "w") as f:
-                    f.write(Rubric.into_md(criteria))
-
-    def read_marks(self, student: str, stage: str) -> str:
-        """
-        reads the marks for the student, of the specific stage, as a md table
-        student: student number minus the s
-        stage: stage number with the s
-        """
-        out = ""
-
-        s = stage.lower()
-        if stage != "pf" and s[0] != "s":
-            s = f"s{stage}"
-
-        for i in range(10):
-            # i is the final digit, one of these has to match, it should be unique?
-            path = f"./temporary/marks/{student[1:]}{i}/{s}/marks.md"
+            path = os.path.join(marks_dir, f"{student_id}{i}", stage_dir, "marks.md")
             if os.path.exists(path):
                 with open(path, "r") as f:
-                    out = f.read()
+                    return f.read()
+        return ""
 
-        print("Out was:")
-        print("Out was:")
-        print("Out was:")
-        print(out)
+    def write_marks(self, rubric: Rubric, student_number: str, stage: str) -> None:
+        """
+        Writes the given Rubric object as markdown to the marks.md file
+        for the specified student_number and stage.
+        """
+        marks_dir = self._marks_directory
+        stage_dir = self._normalize_stage_dir(stage)
+        md_content = Rubric.into_md(rubric)
+        student_id = student_number[1:]  # e.g. strip 's' from 's1234567'
 
-        return out
+        for i in range(10):
+            path = os.path.join(marks_dir, f"{student_id}{i}", stage_dir, "marks.md")
+            if os.path.exists(path):
+                with open(path, "w") as f:
+                    f.write(md_content)
+                    print(f"Wrote marks to {path}")
+                return  # Once we find and write, we're done.
+
+        print(f"Failed to write marks for {student_number}")
+
+    def list_commits(self, student_number: str) -> List[CommitInfo]:
+        """
+        Returns a list of the commits from the student's 'repo' repository,
+        caching results to avoid repeated API calls.
+        """
+        if student_number not in self._commits_cache:
+            student = self._students.get(student_number)
+            if not student:
+                return []
+
+            repo = self._get_student_repo(student)
+            if not repo:
+                return []
+
+            commits = []
+            for c in repo.get_commits():
+                commits.append(
+                    CommitInfo(
+                        date=c.created,
+                        hash=c.sha,
+                        message=c._commit["message"],
+                        url=c._html_url,
+                    )
+                )
+            self._commits_cache[student_number] = commits
+
+        return self._commits_cache[student_number]
+
+    def _init_gitea(self) -> Gitea:
+        """
+        Initializes the Gitea client using the token in TOKEN_PATH.
+        """
+        with open(TOKEN_PATH) as file:
+            token = file.read().strip()
+        return Gitea(GITEA_URL, token)
+
+    def _load_students(self):
+        """
+        Load all students (sXXXXXXX accounts) and cache them.
+        """
+        users = self._gitea.get_users()
+        for user in users:
+            if self._is_student_user(user):
+                self._students[user.username] = user
+
+    def _load_criteria(self):
+        """
+        Loads all .yaml criteria files into memory for quick searching.
+        """
+        criteria_root = os.path.join(".", "criteria")
+        all_paths = _list_files(criteria_root)
+
+        self._criteria_list.clear()
+        for path in all_paths:
+            if path.endswith(".yaml"):
+                with open(path, "r") as file:
+                    data = file.read()
+                    crit = Rubric.from_yaml(data)
+                    self._criteria_list.append(crit)
+
+    def _is_student_user(self, user: User) -> bool:
+        pattern = r"s\d{7}"
+        return bool(re.search(pattern, user.username))
+
+    def _clone_marks_repo_if_ready(self):
+        if self._year and self._semester:
+            self._clone_marks_repo()
+
+    def _clone_student_repo(self) -> None:
+        """
+        Clones the current student's repository into temporary/repo/<student_number>.
+        If sefl._commit_hash is not None, checks out that commit.
+        If the directory already exists, tries to open it as a git repo and optionally
+        checkout the commit. If that fails, removes the directory and starts fresh.
+        """
+        if not self._student_number:
+            return
+
+        student = self._students.get(self._student_number)
+        if not student:
+            print(f"No student found for {self._student_number}")
+            return
+
+        repo = self._get_student_repo(student)
+        if not repo:
+            print(f"No repository found for student {self._student_number}")
+            return
+
+        local_dir = os.path.join("temporary", "repo", self._student_number)
+
+        if not os.path.exists(local_dir):
+            os.makedirs(local_dir, exist_ok=True)
+            try:
+                print(f"Cloning {self._student_number}'s repo into: {local_dir}")
+                cloned_repo = Repo.clone_from(repo.ssh_url, local_dir)
+                if self._commit_hash:
+                    cloned_repo.git.checkout(self._commit_hash)
+            except Exception as e:
+                print(f"Could not clone {self._student_number}'s repo:\n{e}")
+        else:
+            # Directory exists: check if it's a valid repo
+            try:
+                existing_repo = Repo(local_dir)
+                if self._commit_hash:
+                    existing_repo.git.checkout(self._commit_hash)
+                print(
+                    f"Repo for {self._student_number} already exists; used existing clone."
+                )
+            except Exception as e:
+                print(
+                    f"Existing directory is invalid or corrupted ({e}). Removing and re-cloning."
+                )
+                shutil.rmtree(local_dir)
+                os.makedirs(local_dir, exist_ok=True)
+                try:
+                    cloned_repo = Repo.clone_from(repo.ssh_url, local_dir)
+                    if self._commit_hash:
+                        cloned_repo.git.checkout(self._commit_hash)
+                except Exception as e2:
+                    print(f"Failed to re-clone {self._student_number}'s repo:\n{e2}")
+
+    def _clone_marks_repo(self):
+        """
+        Clones the marks repo for the currently selected semester/year,
+        if not already cloned. It does NOT pull or overwrite any changes
+        to avoid accidental data loss.
+        """
+        url = f"git@csse3010-gitea.zones.eait.uq.edu.au:uqmdsouz/marking_sem{self._semester}_{self._year}.git"
+        repo_dir = self._marks_directory
+
+        if not os.path.exists(repo_dir):
+            os.makedirs(repo_dir, exist_ok=True)
+            try:
+                print(f"Cloning marks repo into: {repo_dir}")
+                Repo.clone_from(url, repo_dir)
+            except Exception as e:
+                print(f"Could not clone marks repo:\n{e}")
+
+    @property
+    def _marks_directory(self) -> str:
+        """
+        Returns the local directory path where the marks repo is stored.
+        e.g. ./temporary/marks_sem2_2025 for sem=2, year=2025.
+        """
+        if not self._semester or not self._year:
+            raise RuntimeError("must have a proper marks directory")
+        return f"./temporary/marks_sem{self._semester}_{self._year}"
+
+    def _normalize_stage_dir(self, stage: str) -> str:
+        """
+        For a given stage string (e.g. 'pf', '1', 'S2'), returns
+        the directory name as 'pf' or 's1', 's2' etc.
+        """
+        stage = stage.lower()
+        if stage != "pf" and not stage.startswith("s"):
+            stage = f"s{stage}"
+        return stage
+
+    def _get_student_repo(self, student: User) -> Optional[Repository]:
+        """
+        Given a student user, find their 'repo' repository inside an org
+        that corresponds to their student number.
+        """
+        if not self._is_student_user(student):
+            return None
+        username = student.username
+        # We try to find an org that "contains" the last digits of the username
+        for org in student.get_orgs():
+            if username[1:] in org.name:
+                for r in org.get_repositories():
+                    if r.name == "repo":
+                        return r
+        return None
+
+
+# Example usage:
+if __name__ == "__main__":
+    app_state = AppState()
+    print("Current Gitea user:", app_state._gitea.get_user().username)
+
+    # Setting year/semester triggers marks repo cloning automatically
+    app_state.year = "2024"
+    app_state.semester = "2"
+
+    # Check loaded rubrics
+    print("Available years:", app_state.get_years())
+    print("Available semesters:", app_state.get_semesters())
+    print("Available stages:", app_state.get_stages())
+
+    # Example: reading/writing marks for a single student, stage
+    app_state.write_marks(
+        rubric=Rubric(name="S2", year="2024", sem="2"),
+        student_number="s4801806",
+        stage="2",
+    )
+    md_content = app_state.read_marks("s1234567", "2")
+    print("Read back marks:\n", md_content)
