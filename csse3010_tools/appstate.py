@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from git import Repo
+import git
 from gitea import Gitea, User, Organization, Repository, Commit
 from serde.yaml import from_yaml
+from textual.app import App
 
 from csse3010_tools.rubric import Rubric
 
@@ -32,9 +34,8 @@ class CommitInfo:
     message: str
     url: str
 
-
 class AppState:
-    def __init__(self):
+    def __init__(self, app: App):
         # Internal "state" fields
         self._year: Optional[str] = None
         self._semester: Optional[str] = None
@@ -42,6 +43,7 @@ class AppState:
         self._student_number: Optional[str] = None
         self._commit_hash: Optional[str] = None
         self._rubric: Optional[Rubric] = None
+        self._app: App = app
 
         # Gitea client
         self._gitea = self._init_gitea()
@@ -61,6 +63,7 @@ class AppState:
 
     @year.setter
     def year(self, value: str):
+        print("YEAR SELECTED")
         if value != self._year:
             self._year = value
             self._clone_marks_repo_if_ready()
@@ -72,6 +75,7 @@ class AppState:
 
     @semester.setter
     def semester(self, value: str):
+        print("SEMESTER SELECTED")
         if value != self._semester:
             self._semester = value
             self._clone_marks_repo_if_ready()
@@ -232,6 +236,7 @@ class AppState:
                 return  # Once we find and write, we're done.
 
         print(f"Failed to write marks for {self._student_number}")
+        self._app.notify(message=f"Couldn't write marks for {self._student_number}, is the marks repo pulled in temporary/marks_semX_YYYY?", severity="error")
 
     def _init_gitea(self) -> Gitea:
         """
@@ -270,7 +275,9 @@ class AppState:
         return bool(re.search(pattern, user.username))
 
     def _clone_marks_repo_if_ready(self):
-        if self._year and self._semester:
+        from textual.widgets import Select
+        if self._year and self._semester and self._year != "Select.BLANK" and self._semester != "Select.BLANK":
+            print("CLONING MARKS REPO")
             self._clone_marks_repo()
 
     def _reload_rubric(self) -> None:
@@ -355,6 +362,18 @@ class AppState:
                 except Exception as e2:
                     print(f"Failed to re-clone {self._student_number}'s repo:\n{e2}")
 
+        # Symlink the directory to $SOURCELIB_ROOT/repo
+        if "SOURCELIB_ROOT" in os.environ:
+            sourcelib_root = os.path.abspath(os.environ["SOURCELIB_ROOT"])
+            target = os.path.join(sourcelib_root, "..", "repo")
+            if os.path.islink(target):
+                os.unlink(target)
+            if os.path.isdir(target):
+                os.rmdir(target)
+            os.symlink(os.path.abspath(local_dir), target)
+        else:
+            self._app.notify(message="SOURCELIB_ROOT is not set.", severity="error")
+
     def _clone_marks_repo(self):
         """
         Clones the marks repo for the currently selected semester/year,
@@ -366,11 +385,21 @@ class AppState:
 
         if not os.path.exists(repo_dir):
             os.makedirs(repo_dir, exist_ok=True)
-            try:
-                print(f"Cloning marks repo into: {repo_dir}")
-                Repo.clone_from(url, repo_dir)
-            except Exception as e:
-                print(f"Could not clone marks repo:\n{e}")
+
+        try:
+            # In the event the repo already exists
+            # return early to avoid doing any damage.
+            _ = git.Repo(repo_dir).git_dir
+            print("Git repo already exists for marks, not overwriting")
+            return
+        except git.exc.InvalidGitRepositoryError:
+            pass
+
+        try:
+            print(f"Cloning marks repo into: {repo_dir}")
+            Repo.clone_from(url, repo_dir)
+        except Exception as e:
+            print(f"Could not clone marks repo:\n{e}")
 
     @property
     def _marks_directory(self) -> str:

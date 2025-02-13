@@ -61,9 +61,13 @@ class MarkingApp(App):
         ("ctrl+r", "reset", "Reset"),
     ]
 
-    app_state: AppState = AppState()
+    app_state: AppState
 
     active_commit: reactive[Optional[str]] = reactive(None)
+
+    def __init__(self):
+        super().__init__()
+        self.app_state = AppState(self)
 
     def on_mount(self) -> None:
         """Initialize the UI after the app mounts."""

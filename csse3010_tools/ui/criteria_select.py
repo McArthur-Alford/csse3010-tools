@@ -26,15 +26,15 @@ class CriteriaSelect(Vertical):
     def compose(self) -> ComposeResult:
         # with Horizontal():
         yield Label("Year:")
-        yield Select([("2024", "2024")], allow_blank=False, id="year_select")
+        yield Select([], allow_blank=True, id="year_select")
         # with Horizontal(classes="metadata_field"):
         yield Label("Semester:")
-        yield Select([("1", "1")], allow_blank=False, id="semester_select")
+        yield Select([], allow_blank=True, id="semester_select")
         # with Horizontal(classes="metadata_field"):
         yield Label("Stage:")
         yield Select(
-            [("pf", "pf")],
-            allow_blank=False,
+            [],
+            allow_blank=True,
             id="stage_select",
         )
         self.border_title = "Select Stage"

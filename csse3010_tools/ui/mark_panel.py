@@ -126,7 +126,10 @@ class TaskPanel(Container):
 
     @on(CommentInput.CommentChanged)
     def on_comment_changed(self, message: CommentInput.CommentChanged) -> None:
-        self.rubric.update_comment(self.task_name, message.comment)
+        try:
+            self.rubric.update_comment(self.task_name, message.comment)
+        except RuntimeError as e:
+            self.notify(message=e.args[0])
 
     def on_mount(self):
         self.refresh_calculation()
@@ -193,7 +196,11 @@ class MarkPanel(VerticalScroll):
         When a MarkButton is clicked, update the rubric model and refresh.
         """
         # Update the rubric with the chosen mark
-        self.rubric.update_mark(event.task_name, event.band_name, event.chosen_mark)
+        try:
+            self.rubric.update_mark(event.task_name, event.band_name, event.chosen_mark)
+        except RuntimeError as e:
+            self.notify(message=e.args[0])
+            # self.notify(message=e)
 
         # Recalculate the total marks in the border
         self.update_border()
