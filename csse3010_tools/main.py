@@ -1,6 +1,6 @@
+import os
 from typing import Optional
-
-from textual import on
+from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Container
 from textual.reactive import reactive
@@ -15,10 +15,11 @@ from textual.widgets import (
     Button,
     Label,
 )
+from subprocess import PIPE, Popen, STDOUT
 
 from csse3010_tools.appstate import AppState
 from csse3010_tools.ui.banner import Banner
-from csse3010_tools.ui.build_menu import BuildMenu
+from csse3010_tools.ui.build_menu import BuildMenu, BuildCommand
 from csse3010_tools.ui.commit_hash_select import CommitHashSelect
 from csse3010_tools.ui.criteria_select import CriteriaSelect
 from csse3010_tools.ui.git_select import GitSelect
@@ -41,7 +42,7 @@ class Body(Container):
             with TabPane("Marking Output Preview", id="markingraw"):
                 yield MarkPanelRaw()
             with TabPane("Build/Run", id="buildmenu"):
-                yield Log()
+                yield BuildMenu()
             with TabPane("Code Viewer", id="viewer"):
                 yield Log()
 
@@ -180,6 +181,29 @@ class MarkingApp(App):
         if self.app_state.rubric:
             raw_panel = self.query_one(MarkPanelRaw)
             raw_panel.text = self.app_state.rubric.into_md()
+
+    @on(BuildCommand)
+    @work(exclusive=True, thread=True)
+    def on_buildcommand(self, message: BuildCommand) -> None:
+        if self.app_state.stage is None:
+            self.notify(message="No stage selected.", severity="warning")
+            return
+        if "SOURCELIB_ROOT" not in os.environ:
+            self.notify(message="SOURCELIB_ROOT is not set.", severity="error")
+            return
+        stage = self.app_state._normalize_stage_dir(self.app_state.stage)
+        command = f"cd $SOURCELIB_ROOT/../repo/{stage}"
+        if message.type == "build":
+            command += " && make"
+        if message.type == "flash":
+            command += " && make && make flash"
+        if message.type == "clean":
+            command += " && make clean"
+        log = self.query_one("#buildlog", Log)
+        with Popen(command, shell=True, stdout=PIPE, stderr=STDOUT) as p:
+            for line in p.stdout:
+                log.write_line(line.decode('utf8'))
+
 
     def _build_criteria_panel(self) -> None:
         """Clears and re-populates the MarkPanel area with the current rubric."""

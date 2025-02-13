@@ -23,6 +23,7 @@
         poetryPkg = poetry2nix.mkPoetryApplication {
           python = pkgs.python312;
           projectDir = self;
+          preferWheels = true;
 
           overrides =
             let
@@ -40,6 +41,7 @@
                   "hatch-vcs"
                   "setuptools"
                 ];
+                pyte = [ ];
               };
             in
             poetry2nix.defaultPoetryOverrides.extend (

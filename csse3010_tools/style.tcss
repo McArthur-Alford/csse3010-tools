@@ -193,3 +193,7 @@ TaskPanel {
 
 CollapsibleTitle {
 }
+
+#buildbar {
+  height: 1;
+}
