@@ -114,6 +114,8 @@ class MarkingApp(App):
             student_full_name = self.app_state.get_student_name(event.number)
             student_name_input.value = student_full_name or "Unknown Name"
 
+            self.app_state.refresh_current_hash()
+
             commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
             commits = self.app_state.list_commits(self.app_state.student_number)
             commit_hash_dropdown.set_options(
@@ -123,6 +125,8 @@ class MarkingApp(App):
                 ]
             )
             commit_hash_dropdown.clear()
+
+            self._update_commit_dropdown()
 
             # Enable the TabbedContent (Marking, etc.)
             self.query_one(TabbedContent).disabled = False
@@ -152,6 +156,15 @@ class MarkingApp(App):
         else:
             commit_dropdown.tooltip = ""
 
+    def _update_commit_dropdown(self) -> None:
+        """Updates the commit hash dropdown with the latest commits."""
+        commit_hash_dropdown = self.query_one("#commit-hash-dropdown", Select)
+
+        # commits = self.app_state.list_commits(self.app_state.student_number or "")
+
+        if self.app_state.commit_hash:
+            commit_hash_dropdown.value = self.app_state.commit_hash
+
     @on(CriteriaSelect.Picked)
     def on_criteria_picked(self, event: CriteriaSelect.Picked) -> None:
         """Event: User changed year/semester/stage in the criteria picker."""
@@ -160,7 +173,11 @@ class MarkingApp(App):
         self.app_state.stage = event.stage
 
         # Now rebuild the MarkPanel with the new rubric (if any)
+        self.app_state.refresh_current_hash()
         self._build_criteria_panel()
+
+        self._update_commit_dropdown()
+
 
     @on(MarkSelected)
     def on_mark_selected(self, _event: MarkSelected) -> None:

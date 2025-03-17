@@ -1,0 +1,85 @@
+year: "2025"
+sem: "1"
+name: s1
+tasks:
+  dt1:
+    description: "Design Task 1: LED Bar Display"
+    bands:
+      "a":
+        descriptions:
+          5: "Fully works with no errors."
+          4: "Fully works but has infrequent errors."
+          3: "Fully works with frequent errors."
+          2: "Works with partial functionality and no errors."
+          1: "Works with partial functionality and has errors."
+          0: "No submission or cannot compile."
+  dt2:
+    description: "Design Task 2: MFS S1 Pushbutton Debouncing"
+    bands:
+      "a":
+        descriptions:
+          5: "Fully works with no errors."
+          4: "Fully works but has infrequent errors."
+          3: "Fully works with frequent errors."
+          2: "Works with partial functionality and no errors."
+          1: "Works with partial functionality and has errors."
+          0: "No submission or cannot compile."
+  dt3:
+    description: "Design Task 3: Testing"
+    bands:
+      "a":
+        descriptions:
+          5: "Fully works with no errors."
+          4: "Fully works but has infrequent errors."
+          3: "Fully works with frequent errors."
+          2: "Works with partial functionality and no errors."
+          1: "Works with partial functionality and has errors."
+          0: "No submission or cannot compile."
+
+  codestyle:
+    description: "Code style"
+    bands:
+      "a":
+        descriptions:
+          5: "Conforms to code style guidelines."
+          4: ""
+          3: "Contains code style errors."
+          2: ""
+          1: ""
+          0: "Code style guides are not followed."
+          
+  mylib:
+    description: "Mylib"
+    bands:
+      "a":
+        descriptions:
+          5: "Conforms to mylib guidelines."
+          4: ""
+          3: "Some mylib guidelines are not followed."
+          2: ""
+          1: ""
+          0: "Mylib guides are not followed."
+
+  hardware_schematic:
+    description: "Hardware Schematic"
+    bands:
+      "a":
+        descriptions:
+          5: "Conforms to guidelines."
+          4: ""
+          3: "Some guidelines are not followed."
+          2: ""
+          1: ""
+          0: "Guides are not followed."
+
+  flowcharts:
+    description: "Flowcharts"
+    bands:
+      "a":
+        descriptions:
+          5: "Conforms to mylib guidelines."
+          4: ""
+          3: "Some mylib guidelines are not followed."
+          2: ""
+          1: ""
+          0: "Mylib guides are not followed."

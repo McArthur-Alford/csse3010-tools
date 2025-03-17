@@ -1,5 +1,6 @@
 import shutil
 import os
+import json
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -34,6 +35,7 @@ class CommitInfo:
     message: str
     url: str
 
+
 class AppState:
     def __init__(self, app: App):
         # Internal "state" fields
@@ -52,6 +54,8 @@ class AppState:
         self._students: Dict[str, User] = {}
         self._criteria_list: List[Rubric] = []
         self._commits_cache: Dict[str, List[CommitInfo]] = {}
+
+        self._latest_commits = self._load_latest_commits()
 
         # Initial loading
         self._load_students()
@@ -236,7 +240,10 @@ class AppState:
                 return  # Once we find and write, we're done.
 
         print(f"Failed to write marks for {self._student_number}")
-        self._app.notify(message=f"Couldn't write marks for {self._student_number}, is the marks repo pulled in temporary/marks_semX_YYYY?", severity="error")
+        self._app.notify(
+            message=f"Couldn't write marks for {self._student_number}, is the marks repo pulled in temporary/marks_semX_YYYY?",
+            severity="error",
+        )
 
     def _init_gitea(self) -> Gitea:
         """
@@ -245,6 +252,40 @@ class AppState:
         with open(TOKEN_PATH) as file:
             token = file.read().strip()
         return Gitea(GITEA_URL, token)
+
+    def _load_latest_commits(self) -> Dict[str, Dict[str, str]]:
+        """
+        Loads the latest_commits.json file into a dictionary.
+        Returns an empty dictionary if the file does not exist or has an error.
+        """
+        latest_commit_file = "./latest_commits.json"
+        if os.path.exists(latest_commit_file):
+            try:
+                with open(latest_commit_file, "r") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Failed to read latest_commits.json: {e}")
+        return {}
+
+    def refresh_current_hash(self) -> None:
+        """
+        Refreshes the commit hash based on the latest_commits.json data.
+        If a new commit hash is found, update _commit_hash and trigger a repo clone.
+        """
+        if not self._student_number or not self._stage:
+            return
+
+        new_commit_hash = None
+
+        # Check if there's a matching commit hash in _latest_commits
+        if self._stage in self._latest_commits:
+            stage_commits = self._latest_commits[self._stage]
+            new_commit_hash = stage_commits.get(self._student_number)
+
+        if new_commit_hash and new_commit_hash != self._commit_hash:
+            print(f"Updating commit hash for {self._student_number}: {new_commit_hash}")
+            self._commit_hash = new_commit_hash
+            self._clone_student_repo()
 
     def _load_students(self):
         """
@@ -276,7 +317,13 @@ class AppState:
 
     def _clone_marks_repo_if_ready(self):
         from textual.widgets import Select
-        if self._year and self._semester and self._year != "Select.BLANK" and self._semester != "Select.BLANK":
+
+        if (
+            self._year
+            and self._semester
+            and self._year != "Select.BLANK"
+            and self._semester != "Select.BLANK"
+        ):
             print("CLONING MARKS REPO")
             self._clone_marks_repo()
 
@@ -308,11 +355,12 @@ class AppState:
                 loaded.load_md(existing_md)
 
         self.rubric = loaded
+        self.refresh_current_hash()
 
     def _clone_student_repo(self) -> None:
         """
         Clones the current student's repository into temporary/repo/<student_number>.
-        If sefl._commit_hash is not None, checks out that commit.
+        If self._commit_hash is not None, checks out that commit.
         If the directory already exists, tries to open it as a git repo and optionally
         checkout the commit. If that fails, removes the directory and starts fresh.
         """
