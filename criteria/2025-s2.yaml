@@ -1,21 +1,31 @@
 year: "2025"
 sem: "1"
-name: s1
+name: s2
 tasks:
   quiz:
     description: "Quiz marks"
     bands:
       "a":
-        2: "All of the marks are achieved"
-        1: "At least half of the marks are achieved"
-        0: "Quiz not submitted or less than half of the marks are achieved"
+        descriptions:
+          2: "All of the marks are achieved"
+          1: "At least half of the marks are achieved"
+          0: "Quiz not submitted or less than half of the marks are achieved"
+    headings:
+      2: "2"
+      1: "1"
+      0: "0"
   workbook:
-    description: "Workbood"
+    description: "Workbook"
     bands:
       "a":
-        2: "Fully completed with hardware schematic and flowchart"
-        1: "Partially completed with hardware schematic or flowchart"
-        0: "Not presented or maintained"
+        descriptions:
+          2: "Fully completed with hardware schematic and flowchart"
+          1: "Partially completed with hardware schematic or flowchart"
+          0: "Not presented or maintained"
+    headings:
+      2: "2"
+      1: "1"
+      0: "0"
   dt1:
     description: "Design Task 1: LED Bar Display"
     bands:

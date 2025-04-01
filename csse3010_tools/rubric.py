@@ -56,19 +56,25 @@ class Task:
 
     def __post_init__(self):
         headings = object.__getattribute__(self, "headings")
-        object.__setattr__(
-            self,
-            "headings",
-            {
-                0: "Absent",
-                1: "Inadequate",
-                2: "Insufficient",
-                3: "Competent",
-                4: "Proficient",
-                5: "Exemplary",
-            }
-            | headings,
-        )
+        if len(headings) == 0:
+            object.__setattr__(
+                self,
+                "headings",
+                {
+                    0: "Absent",
+                    1: "Inadequate",
+                    2: "Insufficient",
+                    3: "Competent",
+                    4: "Proficient",
+                    5: "Exemplary",
+                }
+            )
+        else:
+            object.__setattr__(
+                self,
+                "headings",
+                headings,
+            )
 
     def calc_marks(self) -> float:
         sum = 0.0
