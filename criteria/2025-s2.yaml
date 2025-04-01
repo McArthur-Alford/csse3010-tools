@@ -114,5 +114,26 @@ tasks:
           2: ""
           1: ""
           0: "Mylib guides are not followed."
-
+  late:
+      description: "Dont touch this"
+      headings:
+        -7: "-7"
+        -6: "-6"
+        -5: "-5"
+        -4: "-4"
+        -3: "-3"
+        -2: "-2"
+        -1: "-1"
+        -0: "-0"
+      bands:
+        "a":
+          descriptions:
+            -7: "-7"
+            -6: "-6"
+            -5: "-5"
+            -4: "-4"
+            -3: "-3"
+            -2: "-2"
+            -1: "-1"
+            -0: "-0"
 
