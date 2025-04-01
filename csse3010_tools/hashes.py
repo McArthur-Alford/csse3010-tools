@@ -13,9 +13,9 @@ design_tasks = {
         2025, 3, 17, 12, 00, 00, tzinfo=datetime.timezone(datetime.timedelta(hours=10))
     ),
     # Dates are not right:
-    # "dt2": datetime.datetime(
-    #     2025, 3, 17, 12, 00, 00, tzinfo=datetime.timezone(datetime.timedelta(hours=10))
-    # ),
+    "s2": datetime.datetime(
+        2025, 3, 31, 12, 00, 00, tzinfo=datetime.timezone(datetime.timedelta(hours=10))
+    ),
     # "dt3": datetime.datetime(
     #     2025, 3, 17, 12, 00, 00, tzinfo=datetime.timezone(datetime.timedelta(hours=10))
     # ),
@@ -78,10 +78,10 @@ def get_latest_commits(students, deadline, existing_commits, current_task: str):
             if commit_date <= deadline and (latest is None or commit_date >= latest):
                 latest = commit_date
                 latest_commit = commit.sha
-            else:
-                if commit_date >= deadline:
-                    print("Found a commit past the deadline, ignoring it")
-                break
+            # else:
+            #     if commit_date >= deadline:
+            #         print("Found a commit past the deadline, ignoring it")
+            #     break
             print(latest_commit)
 
         latest_commits[student] = latest_commit if latest_commit else "No commits found"

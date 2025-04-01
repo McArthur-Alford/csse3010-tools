@@ -75,6 +75,7 @@
             pkgs.python312Packages.python-lsp-server
             pkgs.vscode-langservers-extracted
             pkgs.python312Packages.textual-dev
+            # pkgs.gcc-arm-embedded
           ];
         };
       }
